@@ -1,0 +1,51 @@
+/**
+ * Beso Studio V2 — Generated Element Scope Isolation (generated-scope.css)
+ * Separates the Studio Shell styling from the user's generated HTML/CSS output.
+ * Every generated element renders inside a dedicated [data-element-scope="<id>"]
+ * root and uses only its own scoped CSS rules.
+ */
+
+.studio-preview-viewport-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  padding: 1.25rem;
+  background-color: var(--studio-canvas-bg);
+  background-image:
+    linear-gradient(to right, var(--studio-canvas-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--studio-canvas-grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  border-radius: var(--studio-radius-md);
+  border: 1px solid var(--studio-border-subtle);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 320px;
+}
+
+.studio-preview-stage {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  transition: max-width 180ms ease;
+}
+
+/* Isolation boundary for generated element instances */
+.beso-isolated-scope-host {
+  all: initial;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 100%;
+  direction: rtl;
+  box-sizing: border-box;
+  font-family: 'Cairo', 'Readex Pro', system-ui, sans-serif;
+}
+
+.beso-isolated-scope-host *,
+.beso-isolated-scope-host *::before,
+.beso-isolated-scope-host *::after {
+  box-sizing: border-box;
+}

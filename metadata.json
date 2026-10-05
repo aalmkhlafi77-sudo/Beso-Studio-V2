@@ -1,0 +1,6 @@
+{
+  "name": "Beso Studio V2",
+  "description": "استوديو ويب عربي متجاوب لتوليد وتخصيص عناصر واجهات HTML/CSS بمعمارية معزولة وقابلة للتوسع.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

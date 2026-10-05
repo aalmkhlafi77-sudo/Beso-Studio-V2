@@ -1,0 +1,471 @@
+/**
+ * Beso Studio V2 — Studio Shell Styles (studio.css)
+ * Pure RTL responsive layout without rigid fixed dimensions.
+ * Relies strictly on CSS variables from themes.css.
+ */
+
+:root {
+  --studio-font-display: 'Readex Pro', 'Cairo', system-ui, sans-serif;
+  --studio-font-body: 'Cairo', 'Readex Pro', system-ui, sans-serif;
+  --studio-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  --studio-radius-sm: 6px;
+  --studio-radius-md: 10px;
+  --studio-radius-lg: 14px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  direction: rtl;
+  text-align: right;
+  font-family: var(--studio-font-body);
+  background-color: var(--studio-bg);
+  color: var(--studio-text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.studio-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  background-color: var(--studio-bg);
+  color: var(--studio-text);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+/* Top Bar Contract: 3 Clean Zones */
+.studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background-color: var(--studio-surface);
+  border-bottom: 1px solid var(--studio-border);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  flex-wrap: wrap;
+}
+
+.studio-brand {
+  font-family: var(--studio-font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--studio-text);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.studio-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 2px;
+}
+
+.studio-nav-link {
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.45rem 0.75rem;
+  font-family: var(--studio-font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--studio-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+
+.studio-nav-link:hover {
+  color: var(--studio-text);
+}
+
+.studio-nav-link[data-active="true"] {
+  color: var(--studio-accent);
+  border-bottom-color: var(--studio-accent);
+}
+
+.studio-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+/* Main Workspace Grid */
+.studio-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  flex: 1;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.studio-column-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.studio-column-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  position: sticky;
+  top: 4.5rem;
+}
+
+/* Panels (Single-Elevation Depth) */
+.studio-panel {
+  background-color: var(--studio-surface);
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-lg);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.studio-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1.125rem;
+  border-bottom: 1px solid var(--studio-border-subtle);
+  background-color: var(--studio-surface-elevated);
+  flex-wrap: wrap;
+}
+
+.studio-panel-title {
+  margin: 0;
+  font-family: var(--studio-font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--studio-text);
+}
+
+.studio-panel-meta {
+  font-size: 0.78rem;
+  color: var(--studio-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-panel-body {
+  padding: 1rem 1.125rem;
+}
+
+/* Library Cards Grid */
+.studio-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.75rem;
+}
+
+.studio-library-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.875rem;
+  background-color: var(--studio-surface-muted);
+  border: 1px solid var(--studio-border-subtle);
+  border-radius: var(--studio-radius-md);
+  text-align: right;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.studio-library-card:hover {
+  border-color: var(--studio-border);
+}
+
+.studio-library-card[data-selected="true"] {
+  border-color: var(--studio-accent);
+  background-color: var(--studio-accent-soft);
+}
+
+/* Horizontal Scrollable Tabs for Inspector & Preview */
+.studio-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  overflow-x: auto;
+  padding: 0.5rem 1rem;
+  background-color: var(--studio-surface-muted);
+  border-bottom: 1px solid var(--studio-border-subtle);
+  scrollbar-width: thin;
+}
+
+.studio-tab-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--studio-text-secondary);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--studio-radius-sm);
+  font-family: var(--studio-font-body);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.studio-tab-btn:hover {
+  color: var(--studio-text);
+  background-color: var(--studio-surface-interactive);
+}
+
+.studio-tab-btn[data-active="true"] {
+  background-color: var(--studio-accent);
+  color: var(--studio-on-accent);
+  border-color: var(--studio-accent);
+}
+
+/* Inspector Form Controls */
+.studio-control-group {
+  padding: 0.875rem 0;
+  border-bottom: 1px solid var(--studio-border-subtle);
+}
+
+.studio-control-group:first-child {
+  padding-top: 0;
+}
+
+.studio-control-group:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.studio-control-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.625rem;
+}
+
+.studio-control-label {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--studio-text);
+}
+
+.studio-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.625rem;
+}
+
+.studio-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.studio-field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--studio-text-secondary);
+}
+
+.studio-input,
+.studio-select,
+.studio-textarea {
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  background-color: var(--studio-bg-subtle);
+  color: var(--studio-text);
+  border: 1px solid var(--studio-border-subtle);
+  border-radius: var(--studio-radius-sm);
+  font-family: var(--studio-font-body);
+  font-size: 0.825rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.studio-input:focus,
+.studio-select:focus,
+.studio-textarea:focus {
+  outline: none;
+  border-color: var(--studio-accent);
+  box-shadow: var(--studio-focus-ring);
+}
+
+.studio-input-num {
+  font-family: var(--studio-font-mono);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  text-align: left;
+}
+
+.studio-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.studio-color-swatch {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Studio Buttons */
+.studio-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--studio-radius-sm);
+  border: 1px solid var(--studio-border);
+  background-color: var(--studio-surface-elevated);
+  color: var(--studio-text);
+  font-family: var(--studio-font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.studio-btn:hover {
+  border-color: var(--studio-accent);
+  background-color: var(--studio-surface-interactive);
+}
+
+.studio-btn-primary {
+  background-color: var(--studio-accent);
+  color: var(--studio-on-accent);
+  border-color: var(--studio-accent);
+}
+
+.studio-btn-primary:hover {
+  background-color: var(--studio-accent-hover);
+  border-color: var(--studio-accent-hover);
+  color: var(--studio-on-accent);
+}
+
+.studio-btn-ghost {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  border-color: var(--studio-border-subtle);
+  background-color: transparent;
+  color: var(--studio-text-secondary);
+}
+
+.studio-btn-ghost:hover {
+  color: var(--studio-accent);
+  border-color: var(--studio-accent);
+}
+
+/* Code Viewer */
+.studio-code-block {
+  margin: 0;
+  padding: 1rem;
+  background-color: var(--studio-code-bg);
+  color: #e6f2ed;
+  font-family: var(--studio-font-mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  direction: ltr;
+  text-align: left;
+  overflow-x: auto;
+  border-radius: var(--studio-radius-sm);
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+/* Experimental AdSlot Container (Only rendered when enabled) */
+.studio-ad-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0.5rem auto;
+  padding: 0.75rem 1rem;
+  max-width: 100%;
+  background-color: var(--studio-surface-muted);
+  border: 1px dashed var(--studio-border);
+  border-radius: var(--studio-radius-md);
+  color: var(--studio-text-muted);
+  text-align: center;
+}
+
+/* Tabular metrics bar */
+.studio-metrics-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--studio-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-metrics-separator {
+  color: var(--studio-text-muted);
+}
+
+/* Responsive Breakpoints:
+   On screens < 1024px (768px, 390px, 360px), stack columns vertically:
+   Header -> Library -> Inspector -> Preview -> Code */
+@media (max-width: 1023px) {
+  .studio-workspace {
+    grid-template-columns: 1fr;
+    padding: 0.75rem;
+  }
+
+  .studio-column-stage {
+    position: static;
+  }
+
+  .studio-header {
+    padding: 0.65rem 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .studio-panel-body {
+    padding: 0.75rem;
+  }
+
+  .studio-library-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .studio-field-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,11 +1,90 @@
-<div align="center">
+# Beso Studio V2 — المرحلة الأولى (النواة والهيكل التأسيسي)
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+استوديو ويب عربي متجاوب (**RTL**) لتوليد وتخصيص عناصر واجهات **HTML/CSS** المستقلة، مبني من الصفر وفق **وثيقة تأسيس Beso Studio V2** بدون أي كود منسوخ من المستودع القديم.
 
-  <h1>Built with AI Studio</h2>
+---
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## 1. المتطلبات والتشغيل المحلي
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+### تثبيت الاعتماديات
+```bash
+npm install
+```
 
-</div>
+### تشغيل خادم التطوير
+```bash
+npm run dev
+```
+يعمل التطبيق افتراضيًا على المنفذ `http://localhost:3000`.
+
+### تشغيل الاختبارات الأساسية (6 اختبارات للعقد)
+```bash
+npm test
+```
+
+### فحص الأنواع (TypeScript)
+```bash
+npm run lint
+```
+
+### بناء نسخة الإنتاج الثابتة (Static Build)
+```bash
+npm run build
+```
+ينتج عن هذا الأمر مجلد `dist/` الجاهز للرفع المباشر إلى استضافة **Hostinger Business**.
+
+---
+
+## 2. إعدادات النطاق الفرعي والرفع إلى Hostinger Business
+
+### أ. تعديل مسار النشر (`base`) من مكان واحد
+- إذا كنت ترفع المشروع إلى **جذر نطاق فرعي** (مثل `https://studio.example.com/`)، فاترك القيمة الافتراضية `'/'`.
+- إذا كنت ترفع المشروع داخل مجلد فرعي (مثل `https://example.com/studio/`)، عدّل متغير `VITE_BASE_PATH` في ملف `.env` أو الثابت `STUDIO_BASE_PATH` في أعلى ملف `vite.config.ts`:
+  ```env
+  VITE_BASE_PATH="/studio/"
+  ```
+
+### ب. خطوات الرفع إلى Hostinger Business
+1. شغّل الأمر:
+   ```bash
+   npm run build
+   ```
+2. افتح لوحة تحكم **Hostinger (hPanel)** وانتقل إلى **File Manager** الخاص بالنطاق أو النطاق الفرعي.
+3. ادخل إلى مجلد `public_html` (أو مجلد النطاق الفرعي المحدد).
+4. ارفع جميع محتويات مجلد `dist/` (بما في ذلك ملف `index.html` ومجلد `assets/` وملف `.htaccess` المنسوخ تلقائيًا من `public/.htaccess`).
+5. تأكد من وجود ملف `.htaccess` لتوجيه جميع مسارات SPA إلى `index.html` وتفريغ الكاش عند تحديث النسخة.
+
+---
+
+## 3. هيكل المشروع (المرحلة الأولى)
+
+```text
+src/
+├── app/
+│   ├── AppShell.tsx          # واجهة الاستوديو المتجاوبة (RTL)
+│   ├── routes.ts             # تعريف مسارات العرض الداخلية
+│   └── providers.tsx         # مزود الحالة والسجل بدون حالة عالمية قابلة للتغيير
+├── core/
+│   ├── registry/             # عقد ElementModule وسجل الوحدات المعزول
+│   ├── state/                # نموذج الحالة المستقل ومخزن الحالة النقي
+│   ├── controls/             # تعريفات الحقول التصريحية للمفتش
+│   ├── templates/            # عقود القوالب والـ Slots للمراحل القادمة
+│   ├── preview/              # محول المعاينة المعزولة وعارض الكود
+│   ├── export/               # عقد ExportBundle المستقل عن React
+│   ├── validation/           # محرك التحقق من الحالة وخلو الكود من undefined/NaN
+│   ├── assets/               # مكتبة الأيقونات المدمجة وأدوات الأصول
+│   └── __tests__/            # اختبارات التحقق الستة الإلزامية
+├── elements/
+│   └── contract-probe/       # عنصر التحقق من العقد التجريبي ومفتشه المستقل
+├── admin/
+│   └── configSchema.ts       # مخطط إعدادات الإدارة والمساحات الإعلانية
+├── shared/
+│   ├── ui/                   # مكون AdSlot التجريبي (معطل افتراضيًا)
+│   ├── theme/                # تعريف وضعي Emerald Luxury وIvory Pearl
+│   ├── typography/           # خيارات الخطوط العربية والأوزان
+│   └── responsive/           # أحجام الشاشات القياسية للمعاينة
+└── styles/
+    ├── studio.css            # تخطيط الاستوديو المتجاوب (RTL)
+    ├── themes.css            # متغيرات الألوان للوضعين البصريين عبر data-theme
+    └── generated-scope.css   # عزل CSS الخاص بالعناصر المولدة عن الاستوديو
+```

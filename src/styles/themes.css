@@ -1,0 +1,102 @@
+/**
+ * Beso Studio V2 — Theme Tokens (themes.css)
+ * All primary colors, surfaces, borders, typography, and accents are defined
+ * strictly through CSS Custom Properties switched via [data-theme].
+ *
+ * Modes:
+ * 1. "emerald-luxury" (alias "dark"): Deep Emerald with Royal Gold
+ * 2. "ivory-pearl" (alias "light"): Ivory Pearl with Warm Gold
+ */
+
+:root,
+[data-theme="emerald-luxury"],
+[data-theme="dark"] {
+  --studio-theme-name: "emerald-luxury";
+
+  /* 60% Dominant Neutral/Emerald Canvas */
+  --studio-bg: #061511;
+  --studio-bg-subtle: #091e18;
+  --studio-canvas-bg: #040f0c;
+  --studio-canvas-grid: rgba(212, 175, 55, 0.07);
+
+  /* 30% Structural Surfaces & Borders */
+  --studio-surface: #0c251e;
+  --studio-surface-elevated: #113229;
+  --studio-surface-muted: #081b15;
+  --studio-surface-interactive: rgba(212, 175, 55, 0.08);
+  --studio-border: rgba(212, 175, 55, 0.20);
+  --studio-border-subtle: rgba(236, 245, 241, 0.09);
+  --studio-border-strong: #d4af37;
+
+  /* 10% Accent Budget (Luxury Gold) */
+  --studio-accent: #d4af37;
+  --studio-accent-hover: #e5c351;
+  --studio-accent-soft: rgba(212, 175, 55, 0.14);
+  --studio-accent-glow: rgba(212, 175, 55, 0.26);
+  --studio-on-accent: #061511;
+
+  /* Typography Hierarchy */
+  --studio-text: #f3f7f5;
+  --studio-text-secondary: #bfd1c9;
+  --studio-text-muted: #829c91;
+
+  /* Semantic Status Tokens */
+  --studio-success: #22c55e;
+  --studio-success-soft: rgba(34, 197, 94, 0.14);
+  --studio-warning: #f59e0b;
+  --studio-warning-soft: rgba(245, 158, 11, 0.15);
+  --studio-danger: #ef4444;
+  --studio-danger-soft: rgba(239, 68, 68, 0.15);
+
+  /* Code & Shadows */
+  --studio-code-bg: #030b09;
+  --studio-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.32);
+  --studio-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.44);
+  --studio-focus-ring: 0 0 0 2px rgba(212, 175, 55, 0.45);
+}
+
+[data-theme="ivory-pearl"],
+[data-theme="light"] {
+  --studio-theme-name: "ivory-pearl";
+
+  /* 60% Dominant Ivory Pearl Canvas */
+  --studio-bg: #faf7f0;
+  --studio-bg-subtle: #f3ede1;
+  --studio-canvas-bg: #f5efe4;
+  --studio-canvas-grid: rgba(166, 124, 30, 0.08);
+
+  /* 30% Structural Surfaces & Borders */
+  --studio-surface: #ffffff;
+  --studio-surface-elevated: #fdfbf7;
+  --studio-surface-muted: #efe8d8;
+  --studio-surface-interactive: rgba(166, 124, 30, 0.08);
+  --studio-border: rgba(166, 124, 30, 0.24);
+  --studio-border-subtle: rgba(24, 36, 31, 0.09);
+  --studio-border-strong: #a67c1e;
+
+  /* 10% Accent Budget (Warm Calm Gold) */
+  --studio-accent: #a67c1e;
+  --studio-accent-hover: #8d6714;
+  --studio-accent-soft: rgba(166, 124, 30, 0.12);
+  --studio-accent-glow: rgba(166, 124, 30, 0.20);
+  --studio-on-accent: #ffffff;
+
+  /* Typography Hierarchy */
+  --studio-text: #16231e;
+  --studio-text-secondary: #3c4f47;
+  --studio-text-muted: #697b73;
+
+  /* Semantic Status Tokens */
+  --studio-success: #15803d;
+  --studio-success-soft: rgba(21, 128, 61, 0.12);
+  --studio-warning: #b45309;
+  --studio-warning-soft: rgba(180, 83, 9, 0.12);
+  --studio-danger: #b91c1c;
+  --studio-danger-soft: rgba(185, 28, 28, 0.12);
+
+  /* Code & Shadows */
+  --studio-code-bg: #121d19;
+  --studio-shadow-sm: 0 2px 6px rgba(22, 35, 30, 0.06);
+  --studio-shadow-md: 0 8px 22px rgba(22, 35, 30, 0.09);
+  --studio-focus-ring: 0 0 0 2px rgba(166, 124, 30, 0.35);
+}

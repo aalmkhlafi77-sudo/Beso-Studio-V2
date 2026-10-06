@@ -179,7 +179,7 @@ body {
 @media (min-width: 1024px) {
   .studio-preview-sticky-unit {
     position: sticky;
-    top: 4.5rem;
+    top: calc(var(--studio-header-height, 0px) + 0.5rem);
     z-index: 20;
     width: 100%;
     display: flex;

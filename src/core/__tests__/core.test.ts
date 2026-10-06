@@ -451,7 +451,24 @@ describe('Beso Studio V2 — Core & Workspace Contract Tests', () => {
       'AppShell must render ExportPanel in its own natural-flow row (.studio-workspace-export-row)'
     );
 
-    // 4. Desktop uses position: sticky on .studio-preview-sticky-unit; mobile disables sticky (position: static)
+    // 4. Desktop uses position: sticky with dynamic calc(var(--studio-header-height, 0px) + 0.5rem) (no hardcoded top: 4.5rem)
+    assert.equal(
+      studioCss.includes('top: 4.5rem'),
+      false,
+      'studio.css must not use a hardcoded top: 4.5rem for .studio-preview-sticky-unit'
+    );
+    assert.equal(
+      studioCss.includes('top: calc(var(--studio-header-height, 0px) + 0.5rem);'),
+      true,
+      'studio.css must position .studio-preview-sticky-unit dynamically below --studio-header-height'
+    );
+    assert.equal(
+      appShellSource.includes('ResizeObserver') &&
+        appShellSource.includes('--studio-header-height') &&
+        appShellSource.includes('ref={headerRef}'),
+      true,
+      'AppShell must measure .studio-header via ResizeObserver and update --studio-header-height'
+    );
     assert.match(
       studioCss,
       /@media\s*\(min-width:\s*1024px\)\s*\{[\s\S]*?\.studio-preview-sticky-unit\s*\{[\s\S]*?position:\s*sticky;/

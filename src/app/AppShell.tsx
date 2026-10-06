@@ -10,7 +10,7 @@
  * 5. Vertical & Horizontal Resize Handles with Pointer Events, keyboard support, and live readouts.
  */
 
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ExportPanel } from '../core/preview/ExportPanel';
 import { PreviewAdapter } from '../core/preview/PreviewAdapter';
 import { PreviewStage } from '../core/preview/PreviewStage';
@@ -201,7 +201,43 @@ export const AppShell: React.FC = () => {
     toggleAdSlot,
   } = useStudio();
 
+  const headerRef = useRef<HTMLElement | null>(null);
   const workspaceContainerRef = useRef<HTMLElement | null>(null);
+  const [headerHeightPx, setHeaderHeightPx] = useState<number>(64);
+
+  useEffect(() => {
+    const headerEl = headerRef.current;
+    if (!headerEl) {
+      return;
+    }
+
+    const updateHeaderHeight = () => {
+      const measured = Math.ceil(headerEl.getBoundingClientRect().height || headerEl.offsetHeight || 0);
+      setHeaderHeightPx(measured);
+      if (typeof document !== 'undefined' && document.documentElement) {
+        document.documentElement.style.setProperty('--studio-header-height', `${measured}px`);
+      }
+    };
+
+    // Measure immediately on load and when theme changes
+    updateHeaderHeight();
+
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        updateHeaderHeight();
+      });
+      observer.observe(headerEl);
+    }
+
+    window.addEventListener('resize', updateHeaderHeight);
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+      window.removeEventListener('resize', updateHeaderHeight);
+    };
+  }, [studioState.theme]);
 
   const registeredEntries = listRegisteredElements(registry);
   const activeInstance = studioState.instances[studioState.activeInstanceId];
@@ -336,9 +372,18 @@ export const AppShell: React.FC = () => {
   );
 
   return (
-    <div className="studio-shell" data-theme={studioState.theme} dir="rtl">
+    <div
+      className="studio-shell"
+      data-theme={studioState.theme}
+      dir="rtl"
+      style={
+        {
+          '--studio-header-height': `${headerHeightPx}px`,
+        } as React.CSSProperties
+      }
+    >
       {/* Top Bar Contract: 3 Clean Zones */}
-      <header className="studio-header">
+      <header ref={headerRef} className="studio-header">
         {/* Zone 1: Single text wordmark */}
         <a
           href="#workspace"

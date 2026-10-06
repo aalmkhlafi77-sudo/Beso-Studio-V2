@@ -42,7 +42,21 @@ export const BUILTIN_ICON_LIBRARY: IconLibraryEntry[] = [
     label: 'تاج (Crown)',
     svgPath: 'M2 18L4 7L9 12L12 5L15 12L20 7L22 18H2Z',
   },
+  {
+    id: 'sparkles',
+    label: 'بريق (Sparkles)',
+    svgPath: 'M12 3L14.5 9.5L21 12L14.5 14.5L12 21L9.5 14.5L3 12L9.5 9.5L12 3Z',
+  },
 ];
+
+export const ICON_LIBRARY_OPTIONS: IconLibraryEntry[] = BUILTIN_ICON_LIBRARY;
+
+export const ICON_LIBRARY_PRESETS: Record<string, string> = Object.fromEntries(
+  BUILTIN_ICON_LIBRARY.map((entry) => [
+    entry.id,
+    `<svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${entry.svgPath}" /></svg>`,
+  ])
+);
 
 export function renderIconMarkup(options: {
   visible: boolean;

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "./styles/themes.css";
 @import "./styles/studio.css";
+@import "./styles/controls.css";
 @import "./styles/generated-scope.css";
+
 

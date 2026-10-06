@@ -1,45 +1,52 @@
 /**
- * Beso Studio V2 — Organized Contract Probe Inspector with Accessible Accordions
+ * Beso Studio V2 — Organized Contract Probe Inspector (Upgraded with Shared Control System)
  *
- * Implements Requirement 1:
- * - Preserves the 4 major categories: المحتوى، الأبعاد، الأيقونة، الألوان والمظهر.
- * - Organizes each category into collapsible Accordion groups (<button>, aria-expanded, aria-controls).
- * - Opens ONLY the primary basic group by default; keeps Advanced Options collapsed by default.
- * - Provides Expand All (فتح الكل) and Collapse All (طي الكل).
- * - Preserves open accordion state across element edits and fullscreen transitions.
- * - Shows modified values count per category and per Accordion group.
- * - Supports Reset Field, Reset Group, Reset Category Section, and Reset Element.
- * - Keeps title, description, number, percentage, analysis, actionLabel, and badge strictly independent.
+ * Uses the unified control components (`src/shared/ui/controls/`):
+ * - Sticky Inspector Header + 4 Major Category Tabs (`content`, `dimensions`, `icon`, `appearance`)
+ * - Accessible Accordion groups (`<button>`, `aria-expanded`, `aria-controls`)
+ * - Dedicated Per-Field Typography Cards (`ControlTypographyCard`)
+ * - Visual Material Selection Cards (`ControlMaterialGrid`)
+ * - Real Color Picker (`ControlColor`)
+ * - Image File Uploader (`ControlFile`)
+ * - Glow & Animation Effects Section (`ControlEffectsSection`)
  */
 
 import React, { useState } from 'react';
 import { BUILTIN_ICON_LIBRARY } from '../../core/assets/assetTypes';
 import { CONTENT_FIELD_LABELS, ControlSectionId } from '../../core/controls/controlTypes';
 import {
+  CardMaterialType,
   ContentFieldKey,
   DeclaredSurfaceTokens,
   EditableIcon,
   EditableText,
+  GradientDirectionType,
   HeightUnitType,
   IconPositionType,
   IconSourceType,
   IndependentDimensions,
   IndependentElementState,
+  PatternPresetType,
   WidthUnitType,
 } from '../../core/state/elementStateTypes';
 import {
   countAccordionGroupModifications,
-  countModifiedInEditableText,
   countSectionModifications,
   InspectorAccordionState,
 } from '../../core/state/workspaceLayoutStore';
-import {
-  AVAILABLE_FONTS,
-  FONT_WEIGHT_OPTIONS,
-  TEXT_ALIGNMENT_OPTIONS,
-  TextAlignment,
-} from '../../shared/typography/typographyTokens';
 import { AccordionGroup } from '../../shared/ui/AccordionGroup';
+import {
+  ControlColor,
+  ControlEffectsSection,
+  ControlFile,
+  ControlMaterialGrid,
+  ControlRange,
+  ControlResetButton,
+  ControlSelect,
+  ControlTextInput,
+  ControlToggle,
+  ControlTypographyCard,
+} from '../../shared/ui/controls';
 import { CONTRACT_PROBE_DEFAULT_STATE } from './contractProbeModule';
 
 export interface ContractProbeInspectorProps {
@@ -76,11 +83,61 @@ const ALL_CONTENT_KEYS: ContentFieldKey[] = [
 ];
 
 const SECTION_TITLES: Record<ControlSectionId, string> = {
-  content: 'المحتوى',
-  dimensions: 'الأبعاد',
-  icon: 'الأيقونة',
-  appearance: 'الألوان والمظهر',
+  content: 'المحتوى والنصوص',
+  dimensions: 'الأبعاد والقياسات',
+  icon: 'الأيقونة والشعار',
+  appearance: 'الألوان والخامات والمؤثرات',
 };
+
+const WIDTH_UNIT_OPTIONS = [
+  { value: 'px', label: 'بكسل (px)' },
+  { value: '%', label: 'نسبة مئوية (%)' },
+  { value: 'vw', label: 'عرض الشاشة (vw)' },
+  { value: 'auto', label: 'تلقائي (auto)' },
+];
+
+const HEIGHT_UNIT_OPTIONS = [
+  { value: 'px', label: 'بكسل (px)' },
+  { value: '%', label: 'نسبة مئوية (%)' },
+  { value: 'vh', label: 'ارتفاع الشاشة (vh)' },
+  { value: 'auto', label: 'تلقائي (auto)' },
+];
+
+const ICON_SOURCE_OPTIONS = [
+  { value: 'icon-library', label: 'مكتبة الأيقونات القياسية' },
+  { value: 'emoji', label: 'رمز تعبيري (Emoji / Symbol)' },
+  { value: 'svg', label: 'مسار SVG مخصص' },
+  { value: 'image', label: 'صورة مرفوعة أو رابط' },
+  { value: 'none', label: 'بدون أيقونة' },
+];
+
+const ICON_POSITION_OPTIONS = [
+  { value: 'start', label: 'البداية - يمين في RTL (Start)' },
+  { value: 'center', label: 'الوسط (Center)' },
+  { value: 'end', label: 'النهاية - يسار في RTL (End)' },
+  { value: 'custom', label: 'موضع حر مخصص (Custom)' },
+];
+
+const GRADIENT_DIRECTIONS: Array<{ value: GradientDirectionType; label: string }> = [
+  { value: '135deg', label: 'قطري 135° (135deg)' },
+  { value: '90deg', label: 'أفقي 90° (90deg)' },
+  { value: '180deg', label: 'رأسي 180° (180deg)' },
+  { value: '45deg', label: 'قطري صاعد 45° (45deg)' },
+  { value: '225deg', label: 'قطري عكسي 225° (225deg)' },
+  { value: '0deg', label: 'من الأسفل للأعلى 0° (0deg)' },
+];
+
+const PATTERN_PRESETS: Array<{ value: PatternPresetType; label: string }> = [
+  { value: 'dots', label: 'نقاط هندسية (Dots)' },
+  { value: 'grid', label: 'شبكة متعامدة (Grid)' },
+  { value: 'diagonal', label: 'خطوط مائلة (Diagonal)' },
+  { value: 'waves', label: 'دوائر متموجة (Waves)' },
+];
+
+const BUILTIN_ICON_SELECT_OPTIONS = BUILTIN_ICON_LIBRARY.map((item) => ({
+  value: item.id,
+  label: item.label,
+}));
 
 export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
   state,
@@ -102,7 +159,8 @@ export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
   onResetCategorySection,
   onResetAll,
 }) => {
-  const [selectedTypographyField, setSelectedTypographyField] = useState<ContentFieldKey>('title');
+  const [selectedTypographyField, setSelectedTypographyField] =
+    useState<ContentFieldKey>('title');
 
   const activeSection = accordionState.activeSection;
   const openSet = new Set(accordionState.openGroupIds);
@@ -113,192 +171,116 @@ export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
   const appearanceModCount = countSectionModifications(state, defaultState, 'appearance');
   const totalModCount =
     contentModCount + dimensionsModCount + iconModCount + appearanceModCount;
-
   const activeSectionModCount = countSectionModifications(state, defaultState, activeSection);
 
   const { icon, dimensions, surface } = state;
-  const currentTypographyField = state.content[selectedTypographyField];
-
-  const renderIndependentTextFieldEditor = (key: ContentFieldKey) => {
-    const item = state.content[key];
-    const defItem = defaultState.content[key];
-    const fieldMods = countModifiedInEditableText(item, defItem);
-
-    return (
-      <div
-        key={key}
-        className="studio-independent-field-card"
-        data-modified={fieldMods > 0}
-        data-field-key={key}
-      >
-        <div className="studio-independent-field-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <input
-              type="checkbox"
-              id={`visible-${key}`}
-              checked={item.visible}
-              onChange={(e) => onUpdateContentField(key, { visible: e.target.checked })}
-            />
-            <label
-              htmlFor={`visible-${key}`}
-              style={{ fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}
-            >
-              {CONTENT_FIELD_LABELS[key]}
-            </label>
-            {fieldMods > 0 && (
-              <span className="studio-modified-count" data-modified="true">
-                {fieldMods} معدل
-              </span>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <input
-              type="color"
-              className="studio-color-swatch-sm"
-              title={`لون مستقل لحقل ${CONTENT_FIELD_LABELS[key]}`}
-              value={item.color}
-              onChange={(e) => onUpdateContentField(key, { color: e.target.value })}
-            />
-            <button
-              type="button"
-              className="studio-btn studio-btn-ghost"
-              onClick={() => onResetContentField(key)}
-              data-testid={`reset-content-${key}`}
-              title="إعادة ضبط هذا الحقل المستقل وحده"
-            >
-              إعادة ضبط الحقل فقط
-            </button>
-          </div>
-        </div>
-
-        <input
-          type="text"
-          className="studio-input"
-          aria-label={CONTENT_FIELD_LABELS[key]}
-          data-testid={`input-content-${key}`}
-          value={item.value}
-          onChange={(e) => onUpdateContentField(key, { value: e.target.value })}
-        />
-      </div>
-    );
-  };
 
   return (
-    <section className="studio-panel" aria-label="المفتش المنظم (Inspector)">
-      {/* Inspector Header with Element-Level Reset */}
-      <div className="studio-panel-header">
-        <div>
-          <h2 className="studio-panel-title">المفتش المنظم (Inspector)</h2>
-          <div className="studio-panel-meta">
-            إجمالي القيم المعدلة في العنصر: {totalModCount} · الحقول والمجموعات معزولة
+    <section
+      className="studio-panel studio-inspector-panel"
+      aria-label="منطقة المفتش المنظم (Inspector Panel)"
+    >
+      {/* Sticky Inspector Header + 4 Category Tabs + Toolbar */}
+      <div className="studio-inspector-sticky-header">
+        <div className="studio-panel-header">
+          <div>
+            <h2 className="studio-panel-title">مفتش الخصائص المنظم (Inspector)</h2>
+            <div className="studio-panel-meta">
+              إجمالي القيم المعدلة في العنصر: {totalModCount}
+            </div>
+          </div>
+
+          <ControlResetButton
+            onClick={onResetAll}
+            label="إعادة ضبط العنصر بالكامل"
+            isModified={totalModCount > 0}
+            testId="reset-all-element-btn"
+          />
+        </div>
+
+        <div className="studio-tabs-bar" role="tablist" aria-label="أقسام المفتش الأربعة">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSection === 'content'}
+            className="studio-tab-btn"
+            data-active={activeSection === 'content'}
+            onClick={() => onSelectSection('content')}
+          >
+            المحتوى ({contentModCount})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSection === 'dimensions'}
+            className="studio-tab-btn"
+            data-active={activeSection === 'dimensions'}
+            onClick={() => onSelectSection('dimensions')}
+          >
+            الأبعاد ({dimensionsModCount})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSection === 'icon'}
+            className="studio-tab-btn"
+            data-active={activeSection === 'icon'}
+            onClick={() => onSelectSection('icon')}
+          >
+            الأيقونة ({iconModCount})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeSection === 'appearance'}
+            className="studio-tab-btn"
+            data-active={activeSection === 'appearance'}
+            onClick={() => onSelectSection('appearance')}
+          >
+            الألوان والمظهر ({appearanceModCount})
+          </button>
+        </div>
+
+        <div className="studio-inspector-toolbar">
+          <span className="studio-panel-meta">
+            القسم النشط: <strong>{SECTION_TITLES[activeSection]}</strong> · التعديلات:{' '}
+            {activeSectionModCount}
+          </span>
+
+          <div className="studio-header-actions">
+            <button
+              type="button"
+              className="studio-btn studio-btn-secondary"
+              data-testid="expand-all-groups-btn"
+              onClick={() => onExpandAllInSection(activeSection)}
+            >
+              فتح الكل
+            </button>
+            <button
+              type="button"
+              className="studio-btn studio-btn-secondary"
+              data-testid="collapse-all-groups-btn"
+              onClick={() => onCollapseAllInSection(activeSection)}
+            >
+              طي الكل
+            </button>
+            <ControlResetButton
+              onClick={() => onResetCategorySection(activeSection)}
+              label={`إعادة ضبط ${SECTION_TITLES[activeSection]}`}
+              isModified={activeSectionModCount > 0}
+              testId={`reset-section-${activeSection}`}
+            />
           </div>
         </div>
-
-        <button
-          type="button"
-          className="studio-btn studio-btn-ghost"
-          onClick={onResetAll}
-          data-testid="reset-entire-element-btn"
-          title="إعادة ضبط جميع حقول العنصر إلى الوضع الافتراضي"
-        >
-          إعادة ضبط العنصر ({totalModCount})
-        </button>
       </div>
 
-      {/* 4 Major Categories Tabs */}
-      <div className="studio-tabs-bar" role="tablist" aria-label="فئات المفتش الأربع الكبرى">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeSection === 'content'}
-          className="studio-tab-btn"
-          data-active={activeSection === 'content'}
-          onClick={() => onSelectSection('content')}
-        >
-          المحتوى ({contentModCount})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeSection === 'dimensions'}
-          className="studio-tab-btn"
-          data-active={activeSection === 'dimensions'}
-          onClick={() => onSelectSection('dimensions')}
-        >
-          الأبعاد ({dimensionsModCount})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeSection === 'icon'}
-          className="studio-tab-btn"
-          data-active={activeSection === 'icon'}
-          onClick={() => onSelectSection('icon')}
-        >
-          الأيقونة ({iconModCount})
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={activeSection === 'appearance'}
-          className="studio-tab-btn"
-          data-active={activeSection === 'appearance'}
-          onClick={() => onSelectSection('appearance')}
-        >
-          الألوان والمظهر ({appearanceModCount})
-        </button>
-      </div>
-
-      {/* Category Action Bar: Expand All, Collapse All, Reset Category Section */}
-      <div className="studio-inspector-toolbar">
-        <div className="studio-metrics-strip">
-          <span>
-            قسم <strong>{SECTION_TITLES[activeSection]}</strong>
-          </span>
-          <span className="studio-metrics-separator">·</span>
-          <span>{activeSectionModCount} قيمة معدلة</span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            className="studio-btn studio-btn-ghost"
-            data-testid="expand-all-groups-btn"
-            onClick={() => onExpandAllInSection(activeSection)}
-          >
-            فتح الكل
-          </button>
-          <button
-            type="button"
-            className="studio-btn studio-btn-ghost"
-            data-testid="collapse-all-groups-btn"
-            onClick={() => onCollapseAllInSection(activeSection)}
-          >
-            طي الكل
-          </button>
-          <button
-            type="button"
-            className="studio-btn studio-btn-ghost"
-            data-testid={`reset-section-${activeSection}-btn`}
-            onClick={() => onResetCategorySection(activeSection)}
-            disabled={activeSectionModCount === 0}
-          >
-            إعادة ضبط القسم ({activeSectionModCount})
-          </button>
-        </div>
-      </div>
-
-      {/* Category Accordion Groups */}
-      <div className="studio-panel-body studio-accordion-stack">
-        {/* ==================== 1. CONTENT CATEGORY ==================== */}
+      <div className="studio-panel-body">
         {activeSection === 'content' && (
-          <>
-            {/* Group 1.1: Primary Content Fields (Open by default) */}
+          <div className="studio-accordion-stack">
             <AccordionGroup
               groupId="content-basic"
-              title="الحقول النصية الأساسية"
-              subtitle="العنوان، الوصف، الوسم، وزر الإجراء"
+              title="النصوص الأساسية (العنوان، الوصف، الوسم، زر الإجراء)"
+              subtitle="كل حقل نصي في بطاقة مستقلة مع حجم الخط ونوعه ولونه ومحاذاة نصه"
               isOpen={openSet.has('content-basic')}
               modifiedCount={countAccordionGroupModifications(
                 state,
@@ -308,16 +290,25 @@ export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
               onToggle={onToggleAccordionGroup}
               onResetGroup={onResetAccordionGroup}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                {BASIC_CONTENT_KEYS.map((key) => renderIndependentTextFieldEditor(key))}
+              <div className="ui-typography-cards-stack">
+                {BASIC_CONTENT_KEYS.map((key) => (
+                  <ControlTypographyCard
+                    key={key}
+                    fieldKey={key}
+                    field={state.content[key]}
+                    defaultField={defaultState.content[key]}
+                    onUpdate={(patch) => onUpdateContentField(key, patch)}
+                    onResetField={() => onResetContentField(key)}
+                    testIdPrefix="probe-content"
+                  />
+                ))}
               </div>
             </AccordionGroup>
 
-            {/* Group 1.2: Independent Quantitative & Analytical Fields */}
             <AccordionGroup
               groupId="content-metrics"
-              title="حقول المؤشرات والتحليل المستقلة"
-              subtitle="الرقم، النسبة المئوية، والنص التحليلي"
+              title="المؤشرات الرقمية والتحليل (الرقم، النسبة، التحليل)"
+              subtitle="بطاقات تحرير مستقلة للرقم والنسبة المئوية والتحليل"
               isOpen={openSet.has('content-metrics')}
               modifiedCount={countAccordionGroupModifications(
                 state,
@@ -327,18 +318,26 @@ export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
               onToggle={onToggleAccordionGroup}
               onResetGroup={onResetAccordionGroup}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                {METRIC_CONTENT_KEYS.map((key) => renderIndependentTextFieldEditor(key))}
+              <div className="ui-typography-cards-stack">
+                {METRIC_CONTENT_KEYS.map((key) => (
+                  <ControlTypographyCard
+                    key={key}
+                    fieldKey={key}
+                    field={state.content[key]}
+                    defaultField={defaultState.content[key]}
+                    onUpdate={(patch) => onUpdateContentField(key, patch)}
+                    onResetField={() => onResetContentField(key)}
+                    testIdPrefix="probe-metric"
+                  />
+                ))}
               </div>
             </AccordionGroup>
 
-            {/* Group 1.3: Advanced Typography Options (Collapsed by default) */}
             <AccordionGroup
               groupId="content-advanced"
-              title="خيارات متقدمة — خصائص الخط والمحاذاة المستقلة"
-              subtitle="مطوية افتراضيًا"
+              title="خيارات متقدمة: الطباعة المركزة لحقل محدد"
+              subtitle="اختر أي حقل نصي لتخصيص طباعته بشكل منفرد"
               isOpen={openSet.has('content-advanced')}
-              isAdvanced
               modifiedCount={countAccordionGroupModifications(
                 state,
                 defaultState,
@@ -347,156 +346,39 @@ export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
               onToggle={onToggleAccordionGroup}
               onResetGroup={onResetAccordionGroup}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    اختر الحقل النصي لتخصيص خطه ومقياسه بشكل مستقل:
-                  </label>
-                  <select
-                    className="studio-select"
-                    value={selectedTypographyField}
-                    onChange={(e) =>
-                      setSelectedTypographyField(e.target.value as ContentFieldKey)
-                    }
-                  >
-                    {ALL_CONTENT_KEYS.map((k) => (
-                      <option key={k} value={k}>
-                        {CONTENT_FIELD_LABELS[k]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="ui-typography-cards-stack">
+                <ControlSelect
+                  label="اختر الحقل النصي المستهدف"
+                  value={selectedTypographyField}
+                  options={ALL_CONTENT_KEYS.map((k) => ({
+                    value: k,
+                    label: CONTENT_FIELD_LABELS[k],
+                  }))}
+                  onChange={(val) => setSelectedTypographyField(val as ContentFieldKey)}
+                  fullWidth
+                />
 
-                <div className="studio-field-grid">
-                  <div className="studio-field">
-                    <label className="studio-field-label">عائلة الخط</label>
-                    <select
-                      className="studio-select"
-                      value={currentTypographyField.fontFamily}
-                      onChange={(e) =>
-                        onUpdateContentField(selectedTypographyField, {
-                          fontFamily: e.target.value,
-                        })
-                      }
-                    >
-                      {AVAILABLE_FONTS.map((font) => (
-                        <option key={font.id} value={font.cssValue}>
-                          {font.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>حجم الخط</span>
-                      <span>{currentTypographyField.fontSize}px</span>
-                    </label>
-                    <input
-                      type="number"
-                      min={10}
-                      max={72}
-                      className="studio-input studio-input-num"
-                      value={currentTypographyField.fontSize}
-                      onChange={(e) =>
-                        onUpdateContentField(selectedTypographyField, {
-                          fontSize: Number(e.target.value) || 14,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="studio-field">
-                    <label className="studio-field-label">وزن الخط</label>
-                    <select
-                      className="studio-select"
-                      value={currentTypographyField.fontWeight}
-                      onChange={(e) =>
-                        onUpdateContentField(selectedTypographyField, {
-                          fontWeight: Number(e.target.value),
-                        })
-                      }
-                    >
-                      {FONT_WEIGHT_OPTIONS.map((w) => (
-                        <option key={w} value={w}>
-                          {w}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>ارتفاع السطر</span>
-                      <span>{currentTypographyField.lineHeight}</span>
-                    </label>
-                    <input
-                      type="number"
-                      step={0.05}
-                      min={1}
-                      max={2.5}
-                      className="studio-input studio-input-num"
-                      value={currentTypographyField.lineHeight}
-                      onChange={(e) =>
-                        onUpdateContentField(selectedTypographyField, {
-                          lineHeight: Number(e.target.value) || 1.4,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>تباعد الأحرف</span>
-                      <span>{currentTypographyField.letterSpacing}px</span>
-                    </label>
-                    <input
-                      type="number"
-                      step={0.5}
-                      min={-2}
-                      max={10}
-                      className="studio-input studio-input-num"
-                      value={currentTypographyField.letterSpacing}
-                      onChange={(e) =>
-                        onUpdateContentField(selectedTypographyField, {
-                          letterSpacing: Number(e.target.value) || 0,
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div className="studio-field">
-                    <label className="studio-field-label">المحاذاة</label>
-                    <select
-                      className="studio-select"
-                      value={currentTypographyField.align}
-                      onChange={(e) =>
-                        onUpdateContentField(selectedTypographyField, {
-                          align: e.target.value as TextAlignment,
-                        })
-                      }
-                    >
-                      {TEXT_ALIGNMENT_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                <ControlTypographyCard
+                  fieldKey={selectedTypographyField}
+                  field={state.content[selectedTypographyField]}
+                  defaultField={defaultState.content[selectedTypographyField]}
+                  onUpdate={(patch) =>
+                    onUpdateContentField(selectedTypographyField, patch)
+                  }
+                  onResetField={() => onResetContentField(selectedTypographyField)}
+                  testIdPrefix="probe-focused"
+                />
               </div>
             </AccordionGroup>
-          </>
+          </div>
         )}
 
-        {/* ==================== 2. DIMENSIONS CATEGORY ==================== */}
         {activeSection === 'dimensions' && (
-          <>
-            {/* Group 2.1: Basic Independent Width & Height (Open by default) */}
+          <div className="studio-accordion-stack">
             <AccordionGroup
               groupId="dimensions-basic"
-              title="الأبعاد الأساسية المستقلة (العرض والارتفاع)"
-              subtitle="مفتوحة افتراضيًا"
+              title="الأبعاد الأساسية (العرض والارتفاع المستقلان)"
+              subtitle="تغيير العرض لا يغير الارتفاع، وتغيير الارتفاع لا يغير العرض"
               isOpen={openSet.has('dimensions-basic')}
               modifiedCount={countAccordionGroupModifications(
                 state,
@@ -506,182 +388,93 @@ export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
               onToggle={onToggleAccordionGroup}
               onResetGroup={onResetAccordionGroup}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    className="studio-btn"
-                    onClick={() =>
+              <div className="ui-control-grid-2">
+                <ControlRange
+                  label="العرض المستقل (Width)"
+                  value={typeof dimensions.width === 'number' ? dimensions.width : 460}
+                  min={220}
+                  max={1200}
+                  step={4}
+                  unit={dimensions.widthUnit === 'auto' ? 'auto' : dimensions.widthUnit}
+                  disabled={dimensions.width === 'auto' || dimensions.widthUnit === 'auto'}
+                  isModified={dimensions.width !== defaultState.dimensions.width}
+                  onChange={(nextW) =>
+                    onUpdateDimensions({
+                      width: nextW,
+                      widthUnit:
+                        dimensions.widthUnit === 'auto' ? 'px' : dimensions.widthUnit,
+                    })
+                  }
+                  onReset={() => onResetDimensionField('width')}
+                  numberTestId="input-dimension-width"
+                />
+
+                <ControlSelect
+                  label="وحدة قياس العرض (Width Unit)"
+                  value={dimensions.widthUnit}
+                  options={WIDTH_UNIT_OPTIONS}
+                  isModified={dimensions.widthUnit !== defaultState.dimensions.widthUnit}
+                  onChange={(unitVal) => {
+                    const u = unitVal as WidthUnitType;
+                    if (u === 'auto') {
+                      onUpdateDimensions({ width: 'auto', widthUnit: 'auto' });
+                    } else {
                       onUpdateDimensions({
-                        width: typeof dimensions.width === 'number' ? dimensions.width + 50 : 500,
-                      })
+                        widthUnit: u,
+                        width: typeof dimensions.width === 'number' ? dimensions.width : 460,
+                      });
                     }
-                  >
-                    زيادة عرض العنصر فقط (+50px)
-                  </button>
-                  <button
-                    type="button"
-                    className="studio-btn"
-                    onClick={() =>
+                  }}
+                  onReset={() => onResetDimensionField('widthUnit')}
+                />
+
+                <ControlRange
+                  label="الارتفاع المستقل (Height)"
+                  value={typeof dimensions.height === 'number' ? dimensions.height : 360}
+                  min={180}
+                  max={1000}
+                  step={4}
+                  unit={dimensions.heightUnit === 'auto' ? 'auto' : dimensions.heightUnit}
+                  disabled={dimensions.height === 'auto' || dimensions.heightUnit === 'auto'}
+                  isModified={dimensions.height !== defaultState.dimensions.height}
+                  onChange={(nextH) =>
+                    onUpdateDimensions({
+                      height: nextH,
+                      heightUnit:
+                        dimensions.heightUnit === 'auto' ? 'px' : dimensions.heightUnit,
+                    })
+                  }
+                  onReset={() => onResetDimensionField('height')}
+                  numberTestId="input-dimension-height"
+                />
+
+                <ControlSelect
+                  label="وحدة قياس الارتفاع (Height Unit)"
+                  value={dimensions.heightUnit}
+                  options={HEIGHT_UNIT_OPTIONS}
+                  isModified={dimensions.heightUnit !== defaultState.dimensions.heightUnit}
+                  onChange={(unitVal) => {
+                    const u = unitVal as HeightUnitType;
+                    if (u === 'auto') {
+                      onUpdateDimensions({ height: 'auto', heightUnit: 'auto' });
+                    } else {
                       onUpdateDimensions({
+                        heightUnit: u,
                         height:
-                          typeof dimensions.height === 'number' ? dimensions.height + 50 : 380,
-                      })
+                          typeof dimensions.height === 'number' ? dimensions.height : 360,
+                      });
                     }
-                  >
-                    زيادة ارتفاع العنصر فقط (+50px)
-                  </button>
-                </div>
-
-                <div className="studio-field-grid">
-                  {/* Width Field */}
-                  <div className="studio-field">
-                    <div className="studio-field-label">
-                      <span>العرض المستقل (width)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetDimensionField('width')}
-                      >
-                        إعادة ضبط العرض
-                      </button>
-                    </div>
-                    <input
-                      type="number"
-                      min={180}
-                      max={1200}
-                      disabled={dimensions.width === 'auto'}
-                      className="studio-input studio-input-num"
-                      data-testid="input-dimension-width"
-                      value={dimensions.width === 'auto' ? 460 : dimensions.width}
-                      onChange={(e) =>
-                        onUpdateDimensions({ width: Number(e.target.value) || 300 })
-                      }
-                    />
-                    {typeof dimensions.width === 'number' && (
-                      <input
-                        type="range"
-                        min={240}
-                        max={860}
-                        value={dimensions.width}
-                        onChange={(e) => onUpdateDimensions({ width: Number(e.target.value) })}
-                      />
-                    )}
-                  </div>
-
-                  <div className="studio-field">
-                    <div className="studio-field-label">
-                      <span>وحدة العرض (widthUnit)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetDimensionField('widthUnit')}
-                      >
-                        ضبط
-                      </button>
-                    </div>
-                    <select
-                      className="studio-select"
-                      value={dimensions.widthUnit}
-                      onChange={(e) => {
-                        const nextUnit = e.target.value as WidthUnitType;
-                        onUpdateDimensions({
-                          widthUnit: nextUnit,
-                          width:
-                            nextUnit === 'auto'
-                              ? 'auto'
-                              : dimensions.width === 'auto'
-                                ? 460
-                                : dimensions.width,
-                        });
-                      }}
-                    >
-                      <option value="px">px (بكسل)</option>
-                      <option value="%">% (نسبة مئوية)</option>
-                      <option value="vw">vw (عرض الشاشة)</option>
-                      <option value="auto">auto (تلقائي)</option>
-                    </select>
-                  </div>
-
-                  {/* Height Field */}
-                  <div className="studio-field">
-                    <div className="studio-field-label">
-                      <span>الارتفاع المستقل (height)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetDimensionField('height')}
-                      >
-                        إعادة ضبط الارتفاع
-                      </button>
-                    </div>
-                    <input
-                      type="number"
-                      min={140}
-                      max={1000}
-                      disabled={dimensions.height === 'auto'}
-                      className="studio-input studio-input-num"
-                      data-testid="input-dimension-height"
-                      value={dimensions.height === 'auto' ? 340 : dimensions.height}
-                      onChange={(e) =>
-                        onUpdateDimensions({ height: Number(e.target.value) || 260 })
-                      }
-                    />
-                    {typeof dimensions.height === 'number' && (
-                      <input
-                        type="range"
-                        min={180}
-                        max={720}
-                        value={dimensions.height}
-                        onChange={(e) => onUpdateDimensions({ height: Number(e.target.value) })}
-                      />
-                    )}
-                  </div>
-
-                  <div className="studio-field">
-                    <div className="studio-field-label">
-                      <span>وحدة الارتفاع (heightUnit)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetDimensionField('heightUnit')}
-                      >
-                        ضبط
-                      </button>
-                    </div>
-                    <select
-                      className="studio-select"
-                      value={dimensions.heightUnit}
-                      onChange={(e) => {
-                        const nextUnit = e.target.value as HeightUnitType;
-                        onUpdateDimensions({
-                          heightUnit: nextUnit,
-                          height:
-                            nextUnit === 'auto'
-                              ? 'auto'
-                              : dimensions.height === 'auto'
-                                ? 340
-                                : dimensions.height,
-                        });
-                      }}
-                    >
-                      <option value="px">px (بكسل)</option>
-                      <option value="%">% (نسبة مئوية)</option>
-                      <option value="vh">vh (ارتفاع الشاشة)</option>
-                      <option value="auto">auto (تلقائي)</option>
-                    </select>
-                  </div>
-                </div>
+                  }}
+                  onReset={() => onResetDimensionField('heightUnit')}
+                />
               </div>
             </AccordionGroup>
 
-            {/* Group 2.2: Advanced Dimension Constraints (Collapsed by default) */}
             <AccordionGroup
               groupId="dimensions-advanced"
-              title="خيارات متقدمة — الحدود الدنيا والعليا وقفل النسبة"
-              subtitle="مطوية افتراضيًا"
+              title="خيارات متقدمة: الحدود الدنيا والقصوى للأبعاد"
+              subtitle="الحد الأدنى والأقصى للعرض والارتفاع وقفل النسبة"
               isOpen={openSet.has('dimensions-advanced')}
-              isAdvanced
               modifiedCount={countAccordionGroupModifications(
                 state,
                 defaultState,
@@ -690,365 +483,194 @@ export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
               onToggle={onToggleAccordionGroup}
               onResetGroup={onResetAccordionGroup}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div className="studio-field-grid">
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>الحد الأدنى للعرض (minWidth)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetDimensionField('minWidth')}
-                      >
-                        ضبط
-                      </button>
-                    </label>
-                    <input
-                      type="number"
-                      min={120}
-                      max={800}
-                      className="studio-input studio-input-num"
-                      value={dimensions.minWidth}
-                      onChange={(e) =>
-                        onUpdateDimensions({ minWidth: Number(e.target.value) || 200 })
-                      }
-                    />
-                  </div>
+              <div className="ui-control-grid-2">
+                <ControlRange
+                  label="الحد الأدنى للعرض (minWidth)"
+                  value={dimensions.minWidth}
+                  min={160}
+                  max={800}
+                  step={10}
+                  unit="px"
+                  isModified={dimensions.minWidth !== defaultState.dimensions.minWidth}
+                  onChange={(val) => onUpdateDimensions({ minWidth: val })}
+                  onReset={() => onResetDimensionField('minWidth')}
+                />
 
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>الحد الأقصى للعرض (maxWidth)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetDimensionField('maxWidth')}
-                      >
-                        ضبط
-                      </button>
-                    </label>
-                    <input
-                      type="number"
-                      min={240}
-                      max={1600}
-                      className="studio-input studio-input-num"
-                      value={dimensions.maxWidth === 'none' ? 960 : dimensions.maxWidth}
-                      onChange={(e) =>
-                        onUpdateDimensions({ maxWidth: Number(e.target.value) || 960 })
-                      }
-                    />
-                  </div>
+                <ControlRange
+                  label="الحد الأقصى للعرض (maxWidth)"
+                  value={typeof dimensions.maxWidth === 'number' ? dimensions.maxWidth : 960}
+                  min={320}
+                  max={1600}
+                  step={20}
+                  unit="px"
+                  isModified={dimensions.maxWidth !== defaultState.dimensions.maxWidth}
+                  onChange={(val) => onUpdateDimensions({ maxWidth: val })}
+                  onReset={() => onResetDimensionField('maxWidth')}
+                />
 
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>الحد الأدنى للارتفاع (minHeight)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetDimensionField('minHeight')}
-                      >
-                        ضبط
-                      </button>
-                    </label>
-                    <input
-                      type="number"
-                      min={100}
-                      max={800}
-                      className="studio-input studio-input-num"
-                      value={dimensions.minHeight}
-                      onChange={(e) =>
-                        onUpdateDimensions({ minHeight: Number(e.target.value) || 160 })
-                      }
-                    />
-                  </div>
+                <ControlRange
+                  label="الحد الأدنى للارتفاع (minHeight)"
+                  value={dimensions.minHeight}
+                  min={120}
+                  max={700}
+                  step={10}
+                  unit="px"
+                  isModified={dimensions.minHeight !== defaultState.dimensions.minHeight}
+                  onChange={(val) => onUpdateDimensions({ minHeight: val })}
+                  onReset={() => onResetDimensionField('minHeight')}
+                />
 
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>الحد الأقصى للارتفاع (maxHeight)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetDimensionField('maxHeight')}
-                      >
-                        ضبط
-                      </button>
-                    </label>
-                    <input
-                      type="number"
-                      min={200}
-                      max={1400}
-                      className="studio-input studio-input-num"
-                      value={dimensions.maxHeight === 'none' ? 900 : dimensions.maxHeight}
-                      onChange={(e) =>
-                        onUpdateDimensions({ maxHeight: Number(e.target.value) || 900 })
-                      }
-                    />
-                  </div>
-                </div>
-
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.82rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={dimensions.lockAspectRatio}
-                    onChange={(e) =>
-                      onUpdateDimensions({ lockAspectRatio: e.target.checked })
-                    }
-                  />
-                  <span>
-                    قفل نسبة العرض إلى الارتفاع اختياريًا (lockAspectRatio) — معطل افتراضيًا
-                  </span>
-                </label>
+                <ControlToggle
+                  label="قفل نسبة العرض إلى الارتفاع"
+                  checked={dimensions.lockAspectRatio}
+                  isModified={
+                    dimensions.lockAspectRatio !== defaultState.dimensions.lockAspectRatio
+                  }
+                  onChange={(checked) => onUpdateDimensions({ lockAspectRatio: checked })}
+                  onReset={() => onResetDimensionField('lockAspectRatio')}
+                />
               </div>
             </AccordionGroup>
-          </>
+          </div>
         )}
 
-        {/* ==================== 3. ICON CATEGORY ==================== */}
         {activeSection === 'icon' && (
-          <>
-            {/* Group 3.1: Basic Icon Settings (Open by default) */}
+          <div className="studio-accordion-stack">
             <AccordionGroup
               groupId="icon-basic"
-              title="الإعدادات الأساسية للأيقونة"
-              subtitle="الظهور، المصدر، القيمة، اللون، والحجم"
+              title="إعدادات الأيقونة الأساسية (الظهور، المصدر، القيمة، اللون، الحجم)"
+              subtitle="تعديل الأيقونة مستقل تمامًا عن النصوص والأبعاد"
               isOpen={openSet.has('icon-basic')}
-              modifiedCount={countAccordionGroupModifications(state, defaultState, 'icon-basic')}
+              modifiedCount={countAccordionGroupModifications(
+                state,
+                defaultState,
+                'icon-basic'
+              )}
               onToggle={onToggleAccordionGroup}
               onResetGroup={onResetAccordionGroup}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <label
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={icon.visible}
-                      onChange={(e) => onUpdateIcon({ visible: e.target.checked })}
-                    />
-                    <span>إظهار الأيقونة (visible)</span>
-                  </label>
+              <div className="ui-typography-cards-stack">
+                <ControlToggle
+                  label="إظهار الأيقونة في العنصر"
+                  checked={icon.visible}
+                  isModified={icon.visible !== defaultState.icon.visible}
+                  onChange={(checked) => onUpdateIcon({ visible: checked })}
+                  onReset={() => onResetIconField('visible')}
+                />
 
-                  <button
-                    type="button"
-                    className="studio-btn studio-btn-ghost"
-                    onClick={() => onResetIconField('visible')}
-                  >
-                    إعادة ضبط الظهور
-                  </button>
-                </div>
-
-                <div className="studio-field-grid">
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>مصدر الأيقونة (source)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetIconField('source')}
-                      >
-                        ضبط
-                      </button>
-                    </label>
-                    <select
-                      className="studio-select"
-                      value={icon.source}
-                      onChange={(e) => {
-                        const nextSource = e.target.value as IconSourceType;
-                        const defaultVal =
-                          nextSource === 'emoji'
-                            ? '✦'
-                            : nextSource === 'icon-library'
-                              ? 'diamond'
-                              : icon.value;
-                        onUpdateIcon({ source: nextSource, value: defaultVal });
-                      }}
-                    >
-                      <option value="icon-library">مكتبة الأيقونات (icon-library)</option>
-                      <option value="emoji">رمز تعبيري (emoji)</option>
-                      <option value="svg">مسار SVG مخصص (svg)</option>
-                      <option value="none">بدون أيقونة (none)</option>
-                    </select>
-                  </div>
+                <div className="ui-control-grid-2">
+                  <ControlSelect
+                    label="مصدر الأيقونة (Icon Source)"
+                    value={icon.source}
+                    options={ICON_SOURCE_OPTIONS}
+                    isModified={icon.source !== defaultState.icon.source}
+                    onChange={(srcVal) =>
+                      onUpdateIcon({ source: srcVal as IconSourceType })
+                    }
+                    onReset={() => onResetIconField('source')}
+                    selectTestId="select-icon-source"
+                  />
 
                   {icon.source === 'icon-library' ? (
-                    <div className="studio-field">
-                      <label className="studio-field-label">
-                        <span>اختيار الأيقونة (value)</span>
-                        <button
-                          type="button"
-                          className="studio-btn studio-btn-ghost"
-                          onClick={() => onResetIconField('value')}
-                        >
-                          ضبط
-                        </button>
-                      </label>
-                      <select
-                        className="studio-select"
-                        value={icon.value}
-                        onChange={(e) => onUpdateIcon({ value: e.target.value })}
-                      >
-                        {BUILTIN_ICON_LIBRARY.map((entry) => (
-                          <option key={entry.id} value={entry.id}>
-                            {entry.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="studio-field">
-                      <label className="studio-field-label">
-                        <span>قيمة الأيقونة (value)</span>
-                        <button
-                          type="button"
-                          className="studio-btn studio-btn-ghost"
-                          onClick={() => onResetIconField('value')}
-                        >
-                          ضبط
-                        </button>
-                      </label>
-                      <input
-                        type="text"
-                        className="studio-input"
-                        value={icon.value}
-                        onChange={(e) => onUpdateIcon({ value: e.target.value })}
-                      />
-                    </div>
-                  )}
-
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>لون الأيقونة (color)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetIconField('color')}
-                      >
-                        ضبط
-                      </button>
-                    </label>
-                    <div className="studio-color-row">
-                      <input
-                        type="color"
-                        className="studio-color-swatch"
-                        value={icon.color}
-                        onChange={(e) => onUpdateIcon({ color: e.target.value })}
-                      />
-                      <input
-                        type="text"
-                        className="studio-input studio-input-num"
-                        value={icon.color}
-                        onChange={(e) => onUpdateIcon({ color: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="studio-field">
-                    <label className="studio-field-label">
-                      <span>الحجم ({icon.size}px)</span>
-                      <button
-                        type="button"
-                        className="studio-btn studio-btn-ghost"
-                        onClick={() => onResetIconField('size')}
-                      >
-                        ضبط
-                      </button>
-                    </label>
-                    <input
-                      type="number"
-                      min={12}
-                      max={96}
-                      className="studio-input studio-input-num"
-                      value={icon.size}
-                      onChange={(e) => onUpdateIcon({ size: Number(e.target.value) || 24 })}
+                    <ControlSelect
+                      label="اختر الأيقونة من المكتبة"
+                      value={icon.value}
+                      options={BUILTIN_ICON_SELECT_OPTIONS}
+                      isModified={icon.value !== defaultState.icon.value}
+                      onChange={(val) => onUpdateIcon({ value: val })}
+                      onReset={() => onResetIconField('value')}
                     />
-                  </div>
+                  ) : icon.source !== 'image' ? (
+                    <ControlTextInput
+                      label="قيمة الأيقونة (رمز Emoji أو مسار SVG)"
+                      value={icon.value}
+                      isModified={icon.value !== defaultState.icon.value}
+                      onChange={(val) => onUpdateIcon({ value: val })}
+                      onReset={() => onResetIconField('value')}
+                      inputTestId="input-icon-value"
+                    />
+                  ) : null}
+                </div>
+
+                {icon.source === 'image' && (
+                  <ControlFile
+                    label="رفع صورة الأيقونة"
+                    value={icon.value}
+                    isModified={icon.value !== defaultState.icon.value}
+                    onChange={(url) => onUpdateIcon({ value: url })}
+                    onReset={() => onResetIconField('value')}
+                  />
+                )}
+
+                <div className="ui-control-grid-2">
+                  <ControlColor
+                    label="لون الأيقونة (Icon Color)"
+                    value={icon.color}
+                    isModified={icon.color !== defaultState.icon.color}
+                    onChange={(nextColor) => onUpdateIcon({ color: nextColor })}
+                    onReset={() => onResetIconField('color')}
+                  />
+
+                  <ControlRange
+                    label="حجم الأيقونة (Icon Size)"
+                    value={icon.size}
+                    min={14}
+                    max={88}
+                    step={2}
+                    unit="px"
+                    isModified={icon.size !== defaultState.icon.size}
+                    onChange={(nextSize) => onUpdateIcon({ size: nextSize })}
+                    onReset={() => onResetIconField('size')}
+                  />
                 </div>
               </div>
             </AccordionGroup>
 
-            {/* Group 3.2: Advanced Icon Transform & Position (Collapsed by default) */}
             <AccordionGroup
               groupId="icon-advanced"
-              title="خيارات متقدمة — الدوران والتموضع"
-              subtitle="مطوية افتراضيًا"
+              title="خيارات متقدمة: الدوران والتموضع"
+              subtitle="زاوية الدوران وموضع الأيقونة داخل الرأس"
               isOpen={openSet.has('icon-advanced')}
-              isAdvanced
-              modifiedCount={countAccordionGroupModifications(state, defaultState, 'icon-advanced')}
+              modifiedCount={countAccordionGroupModifications(
+                state,
+                defaultState,
+                'icon-advanced'
+              )}
               onToggle={onToggleAccordionGroup}
               onResetGroup={onResetAccordionGroup}
             >
-              <div className="studio-field-grid">
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>زاوية الدوران ({icon.rotate}°)</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetIconField('rotate')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <input
-                    type="range"
-                    min={-180}
-                    max={180}
-                    value={icon.rotate}
-                    onChange={(e) => onUpdateIcon({ rotate: Number(e.target.value) })}
-                  />
-                </div>
+              <div className="ui-control-grid-2">
+                <ControlRange
+                  label="زاوية الدوران (Rotation)"
+                  value={icon.rotate}
+                  min={-180}
+                  max={180}
+                  step={5}
+                  unit="deg"
+                  isModified={icon.rotate !== defaultState.icon.rotate}
+                  onChange={(deg) => onUpdateIcon({ rotate: deg })}
+                  onReset={() => onResetIconField('rotate')}
+                />
 
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>موضع الأيقونة (position)</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetIconField('position')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <select
-                    className="studio-select"
-                    value={icon.position}
-                    onChange={(e) =>
-                      onUpdateIcon({ position: e.target.value as IconPositionType })
-                    }
-                  >
-                    <option value="start">البداية (start)</option>
-                    <option value="center">الوسط (center)</option>
-                    <option value="end">النهاية (end)</option>
-                    <option value="custom">توزيع حر (custom)</option>
-                  </select>
-                </div>
+                <ControlSelect
+                  label="موضع الأيقونة (Position)"
+                  value={icon.position}
+                  options={ICON_POSITION_OPTIONS}
+                  isModified={icon.position !== defaultState.icon.position}
+                  onChange={(pos) => onUpdateIcon({ position: pos as IconPositionType })}
+                  onReset={() => onResetIconField('position')}
+                />
               </div>
             </AccordionGroup>
-          </>
+          </div>
         )}
 
-        {/* ==================== 4. APPEARANCE CATEGORY ==================== */}
         {activeSection === 'appearance' && (
-          <>
-            {/* Group 4.1: Basic Surface Colors & Radius (Open by default) */}
+          <div className="studio-accordion-stack">
             <AccordionGroup
               groupId="appearance-basic"
-              title="الألوان الأساسية واستدارة الزوايا"
-              subtitle="مفتوحة افتراضيًا"
+              title="الخامة البصرية والألوان الأساسية واستدارة الزوايا"
+              subtitle="بطاقات اختيار مرئية للخامات التسع مع منتقيات ألوان مستقلة"
               isOpen={openSet.has('appearance-basic')}
               modifiedCount={countAccordionGroupModifications(
                 state,
@@ -1058,117 +680,100 @@ export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
               onToggle={onToggleAccordionGroup}
               onResetGroup={onResetAccordionGroup}
             >
-              <div className="studio-field-grid">
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>لون خلفية العنصر</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetSurfaceField('backgroundColor')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <div className="studio-color-row">
-                    <input
-                      type="color"
-                      className="studio-color-swatch"
-                      value={surface.backgroundColor}
-                      onChange={(e) => onUpdateSurface({ backgroundColor: e.target.value })}
-                    />
-                    <input
-                      type="text"
-                      className="studio-input studio-input-num"
-                      value={surface.backgroundColor}
-                      onChange={(e) => onUpdateSurface({ backgroundColor: e.target.value })}
-                    />
-                  </div>
-                </div>
+              <div className="ui-typography-cards-stack">
+                <ControlMaterialGrid
+                  label="نوع الخامة البصرية (9 خامات مرئية)"
+                  value={surface.materialType}
+                  isModified={surface.materialType !== defaultState.surface.materialType}
+                  onChange={(nextMat: CardMaterialType) =>
+                    onUpdateSurface({ materialType: nextMat })
+                  }
+                  onReset={() => onResetSurfaceField('materialType')}
+                />
 
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>لون الإطار (borderColor)</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetSurfaceField('borderColor')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <div className="studio-color-row">
-                    <input
-                      type="color"
-                      className="studio-color-swatch"
-                      value={surface.borderColor}
-                      onChange={(e) => onUpdateSurface({ borderColor: e.target.value })}
-                    />
-                    <input
-                      type="text"
-                      className="studio-input studio-input-num"
-                      value={surface.borderColor}
-                      onChange={(e) => onUpdateSurface({ borderColor: e.target.value })}
-                    />
-                  </div>
-                </div>
+                <ControlFile
+                  label="صورة خلفية السطح (Surface Image)"
+                  value={surface.imageSourceUrl}
+                  isModified={
+                    surface.imageSourceUrl !== defaultState.surface.imageSourceUrl
+                  }
+                  onChange={(nextUrl) => onUpdateSurface({ imageSourceUrl: nextUrl })}
+                  onReset={() => onResetSurfaceField('imageSourceUrl')}
+                />
 
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>لون خلفية زر الإجراء</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetSurfaceField('actionBackgroundColor')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <div className="studio-color-row">
-                    <input
-                      type="color"
-                      className="studio-color-swatch"
-                      value={surface.actionBackgroundColor}
-                      onChange={(e) => onUpdateSurface({ actionBackgroundColor: e.target.value })}
-                    />
-                    <input
-                      type="text"
-                      className="studio-input studio-input-num"
-                      value={surface.actionBackgroundColor}
-                      onChange={(e) => onUpdateSurface({ actionBackgroundColor: e.target.value })}
-                    />
-                  </div>
-                </div>
+                <div className="ui-control-grid-2">
+                  <ControlColor
+                    label="لون الخلفية الأساسي"
+                    value={surface.backgroundColor}
+                    isModified={
+                      surface.backgroundColor !== defaultState.surface.backgroundColor
+                    }
+                    onChange={(nextColor) =>
+                      onUpdateSurface({
+                        backgroundColor: nextColor,
+                        primaryColor: nextColor,
+                      })
+                    }
+                    onReset={() => {
+                      onResetSurfaceField('backgroundColor');
+                      onResetSurfaceField('primaryColor');
+                    }}
+                  />
 
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>استدارة الزوايا ({surface.borderRadius}px)</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetSurfaceField('borderRadius')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={40}
-                    value={surface.borderRadius}
-                    onChange={(e) => onUpdateSurface({ borderRadius: Number(e.target.value) })}
+                  <ControlColor
+                    label="اللون الثانوي"
+                    value={surface.secondaryColor}
+                    isModified={
+                      surface.secondaryColor !== defaultState.surface.secondaryColor
+                    }
+                    onChange={(nextColor) => onUpdateSurface({ secondaryColor: nextColor })}
+                    onReset={() => onResetSurfaceField('secondaryColor')}
+                  />
+
+                  <ControlColor
+                    label="لون الإطار (Border Color)"
+                    value={surface.borderColor}
+                    isModified={surface.borderColor !== defaultState.surface.borderColor}
+                    onChange={(nextColor) => onUpdateSurface({ borderColor: nextColor })}
+                    onReset={() => onResetSurfaceField('borderColor')}
+                  />
+
+                  <ControlColor
+                    label="لون خلفية الزر"
+                    value={surface.actionBackgroundColor}
+                    isModified={
+                      surface.actionBackgroundColor !==
+                      defaultState.surface.actionBackgroundColor
+                    }
+                    onChange={(nextColor) =>
+                      onUpdateSurface({
+                        actionBackgroundColor: nextColor,
+                        accentColor: nextColor,
+                      })
+                    }
+                    onReset={() => onResetSurfaceField('actionBackgroundColor')}
                   />
                 </div>
+
+                <ControlRange
+                  label="استدارة الزوايا (Border Radius)"
+                  value={surface.borderRadius}
+                  min={0}
+                  max={48}
+                  step={2}
+                  unit="px"
+                  isModified={surface.borderRadius !== defaultState.surface.borderRadius}
+                  onChange={(val) => onUpdateSurface({ borderRadius: val })}
+                  onReset={() => onResetSurfaceField('borderRadius')}
+                />
               </div>
             </AccordionGroup>
 
-            {/* Group 4.2: Advanced Surface Spacing & Borders (Collapsed by default) */}
             <AccordionGroup
               groupId="appearance-advanced"
-              title="خيارات متقدمة — المسافات الداخلية وسماكة الإطار"
-              subtitle="مطوية افتراضيًا"
+              title="المؤثرات (التوهج والحركة) والزجاج والظلال والمسافات"
+              subtitle="تفعيل التوهج والحركة، ضبابية الزجاج، الظلال، والمسافات الداخلية"
               isOpen={openSet.has('appearance-advanced')}
-              isAdvanced
               modifiedCount={countAccordionGroupModifications(
                 state,
                 defaultState,
@@ -1177,93 +782,95 @@ export const ContractProbeInspector: React.FC<ContractProbeInspectorProps> = ({
               onToggle={onToggleAccordionGroup}
               onResetGroup={onResetAccordionGroup}
             >
-              <div className="studio-field-grid">
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>الحشو الأفقي ({surface.paddingX}px)</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetSurfaceField('paddingX')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <input
-                    type="number"
-                    min={8}
-                    max={64}
-                    className="studio-input studio-input-num"
-                    value={surface.paddingX}
-                    onChange={(e) => onUpdateSurface({ paddingX: Number(e.target.value) || 16 })}
-                  />
-                </div>
+              <div className="ui-typography-cards-stack">
+                <ControlEffectsSection
+                  glowColor={surface.glowColor}
+                  glowIntensity={surface.glowIntensity}
+                  defaultGlowColor={defaultState.surface.glowColor}
+                  defaultGlowIntensity={defaultState.surface.glowIntensity}
+                  onUpdateGlow={(patch) => onUpdateSurface(patch)}
+                  onResetGlow={() => {
+                    onResetSurfaceField('glowColor');
+                    onResetSurfaceField('glowIntensity');
+                  }}
+                />
 
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>الحشو الرأسي ({surface.paddingY}px)</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetSurfaceField('paddingY')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <input
-                    type="number"
-                    min={8}
-                    max={64}
-                    className="studio-input studio-input-num"
-                    value={surface.paddingY}
-                    onChange={(e) => onUpdateSurface({ paddingY: Number(e.target.value) || 16 })}
+                <div className="ui-control-grid-2">
+                  <ControlSelect
+                    label="اتجاه التدرج"
+                    value={surface.gradientDirection}
+                    options={GRADIENT_DIRECTIONS}
+                    isModified={
+                      surface.gradientDirection !== defaultState.surface.gradientDirection
+                    }
+                    onChange={(dir) =>
+                      onUpdateSurface({ gradientDirection: dir as GradientDirectionType })
+                    }
+                    onReset={() => onResetSurfaceField('gradientDirection')}
                   />
-                </div>
 
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>تباعد العناصر الداخلي ({surface.gap}px)</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetSurfaceField('gap')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <input
-                    type="number"
-                    min={4}
-                    max={40}
-                    className="studio-input studio-input-num"
-                    value={surface.gap}
-                    onChange={(e) => onUpdateSurface({ gap: Number(e.target.value) || 12 })}
+                  <ControlSelect
+                    label="نمط النقش الهندسي"
+                    value={surface.patternType}
+                    options={PATTERN_PRESETS}
+                    isModified={surface.patternType !== defaultState.surface.patternType}
+                    onChange={(pat) =>
+                      onUpdateSurface({ patternType: pat as PatternPresetType })
+                    }
+                    onReset={() => onResetSurfaceField('patternType')}
                   />
-                </div>
 
-                <div className="studio-field">
-                  <label className="studio-field-label">
-                    <span>سماكة الإطار ({surface.borderWidth}px)</span>
-                    <button
-                      type="button"
-                      className="studio-btn studio-btn-ghost"
-                      onClick={() => onResetSurfaceField('borderWidth')}
-                    >
-                      ضبط
-                    </button>
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={8}
-                    className="studio-input studio-input-num"
+                  <ControlRange
+                    label="سماكة الإطار (Border Width)"
                     value={surface.borderWidth}
-                    onChange={(e) => onUpdateSurface({ borderWidth: Number(e.target.value) || 0 })}
+                    min={0}
+                    max={12}
+                    step={1}
+                    unit="px"
+                    isModified={surface.borderWidth !== defaultState.surface.borderWidth}
+                    onChange={(val) => onUpdateSurface({ borderWidth: val })}
+                    onReset={() => onResetSurfaceField('borderWidth')}
+                  />
+
+                  <ControlRange
+                    label="المسافة الفاصلة (Gap)"
+                    value={surface.gap}
+                    min={4}
+                    max={48}
+                    step={2}
+                    unit="px"
+                    isModified={surface.gap !== defaultState.surface.gap}
+                    onChange={(val) => onUpdateSurface({ gap: val })}
+                    onReset={() => onResetSurfaceField('gap')}
+                  />
+
+                  <ControlRange
+                    label="الحشو الأفقي (Padding X)"
+                    value={surface.paddingX}
+                    min={8}
+                    max={64}
+                    step={2}
+                    unit="px"
+                    isModified={surface.paddingX !== defaultState.surface.paddingX}
+                    onChange={(val) => onUpdateSurface({ paddingX: val })}
+                    onReset={() => onResetSurfaceField('paddingX')}
+                  />
+
+                  <ControlRange
+                    label="الحشو الرأسي (Padding Y)"
+                    value={surface.paddingY}
+                    min={8}
+                    max={64}
+                    step={2}
+                    unit="px"
+                    isModified={surface.paddingY !== defaultState.surface.paddingY}
+                    onChange={(val) => onUpdateSurface({ paddingY: val })}
+                    onReset={() => onResetSurfaceField('paddingY')}
                   />
                 </div>
               </div>
             </AccordionGroup>
-          </>
+          </div>
         )}
       </div>
     </section>

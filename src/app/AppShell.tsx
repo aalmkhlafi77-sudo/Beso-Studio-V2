@@ -14,7 +14,19 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ExportPanel } from '../core/preview/ExportPanel';
 import { PreviewAdapter } from '../core/preview/PreviewAdapter';
 import { PreviewStage } from '../core/preview/PreviewStage';
-import { getElementModule, listRegisteredElements } from '../core/registry/elementRegistry';
+import {
+  countElementsByCategory,
+  ElementOriginGroup,
+  getElementModule,
+  LIBRARY_CATEGORIES,
+  LibraryCategoryFilterId,
+  listRegisteredElements,
+  queryRegistryElements,
+  RegisteredElementEntry,
+  resolveElementOriginGroup,
+  resolveElementPrimaryCategory,
+  resolveElementTags,
+} from '../core/registry/elementRegistry';
 import {
   createInitialStudioState,
   resetInstanceContentField,
@@ -25,9 +37,23 @@ import {
   updateInstanceIcon,
 } from '../core/state/studioStore';
 import { WORKSPACE_LAYOUT_BOUNDS } from '../core/state/workspaceLayoutStore';
+import { AuthFormInspector } from '../elements/auth-form/AuthFormInspector';
+import { AUTH_FORM_ELEMENT_ID } from '../elements/auth-form/authFormModule';
+import { BrandIdentityInspector } from '../elements/brand-identity/BrandIdentityInspector';
+import { BRAND_IDENTITY_ELEMENT_ID } from '../elements/brand-identity/brandIdentityModule';
+import { ButtonInspector } from '../elements/button/ButtonInspector';
+import { BUTTON_ELEMENT_ID } from '../elements/button/buttonModule';
 import { CardInspector } from '../elements/card/CardInspector';
 import { CARD_ELEMENT_ID } from '../elements/card/cardModule';
+import { CarouselInspector } from '../elements/carousel/CarouselInspector';
+import { CAROUSEL_ELEMENT_ID } from '../elements/carousel/carouselModule';
 import { ContractProbeInspector } from '../elements/contract-probe/ContractProbeInspector';
+import { HeroInspector } from '../elements/hero/HeroInspector';
+import { HERO_ELEMENT_ID } from '../elements/hero/heroModule';
+import { ImportedComponentInspector } from '../elements/imported-component/ImportedComponentInspector';
+import { IMPORTED_COMPONENT_ID } from '../elements/imported-component/importedComponentModule';
+import { SocialDockInspector } from '../elements/social-dock/SocialDockInspector';
+import { SOCIAL_DOCK_ELEMENT_ID } from '../elements/social-dock/socialDockModule';
 import { STUDIO_THEMES, StudioThemeMode } from '../shared/theme/themeTokens';
 import { AdSlot, resolveAdSlotRenderDecision } from '../shared/ui/AdSlot';
 import { WorkspaceResizeHandle } from '../shared/ui/WorkspaceResizeHandle';
@@ -201,11 +227,38 @@ export const AppShell: React.FC = () => {
     resetWorkspaceLayout,
     updatePreviewState,
     toggleAdSlot,
+    updateImportedSource,
+    restoreImportedOriginalSource,
+    clearImportedSource,
+    updateImportedOverrides,
+    updateImportedMappedOverrides,
+    resetImportedOverrides,
+    updateImportedMapping,
+    resetImportedMapping,
+    updateButtonData,
+    updateButtonStateStyle,
+    updateCarouselData,
+    updateCarouselSlideField,
+    updateCarouselSlideMeta,
+    addCarouselSlide,
+    removeCarouselSlide,
+    updateHeroData,
+    updateHeroAction,
+    updateSocialDockData,
+    updateSocialDockItem,
+    addSocialDockItem,
+    removeSocialDockItem,
+    updateBrandIdentityData,
+    updateAuthFormData,
+    updateAuthFormField,
   } = useStudio();
 
   const headerRef = useRef<HTMLElement | null>(null);
   const workspaceContainerRef = useRef<HTMLElement | null>(null);
   const [headerHeightPx, setHeaderHeightPx] = useState<number>(64);
+  const [selectedLibraryCategory, setSelectedLibraryCategory] =
+    useState<LibraryCategoryFilterId>('all');
+  const [librarySearchQuery, setLibrarySearchQuery] = useState<string>('');
 
   useEffect(() => {
     const headerEl = headerRef.current;
@@ -242,6 +295,13 @@ export const AppShell: React.FC = () => {
   }, [studioState.theme]);
 
   const registeredEntries = listRegisteredElements(registry);
+  const categoryCounts = countElementsByCategory(registry);
+  const filteredEntries = queryRegistryElements(
+    registry,
+    selectedLibraryCategory,
+    librarySearchQuery
+  );
+
   const activeInstance = studioState.instances[studioState.activeInstanceId];
   const activeModule = getElementModule(registry, activeInstance.elementType);
 
@@ -275,13 +335,132 @@ export const AppShell: React.FC = () => {
     }
   };
 
+  const renderLibraryCardItem = (entry: RegisteredElementEntry) => {
+    const isSelected = activeInstance.elementType === entry.id;
+    const primaryCatId = resolveElementPrimaryCategory(entry);
+    const catMeta = LIBRARY_CATEGORIES.find((c) => c.id === primaryCatId);
+    const originGroup = resolveElementOriginGroup(entry);
+    const tags = resolveElementTags(entry);
+
+    const originBadgeLabel =
+      originGroup === 'imported'
+        ? 'عنصر مستورد (Imported)'
+        : originGroup === 'template'
+          ? 'قالب (Template)'
+          : 'عنصر أصيل (Native)';
+
+    const iconGlyphMap: Record<string, string> = {
+      button: '◉',
+      card: '▣',
+      carousel: '❖',
+      hero: '★',
+      'auth-form': '🔒',
+      'brand-identity': '◈',
+      'social-dock': '✦',
+      'imported-component': '⟨/⟩',
+      'contract-probe': '⚙',
+    };
+
+    return (
+      <button
+        key={entry.id}
+        type="button"
+        className="studio-library-card"
+        data-selected={isSelected}
+        data-origin={originGroup}
+        data-category={primaryCatId}
+        data-testid={`library-card-${entry.id}`}
+        onClick={() => handleSelectLibraryElement(entry.id)}
+      >
+        <div className="studio-library-card__header">
+          <div className="studio-library-card__title-group">
+            <span className="studio-library-card__icon-chip" aria-hidden="true">
+              {iconGlyphMap[entry.id] || '◈'}
+            </span>
+            <strong style={{ fontSize: '0.88rem' }}>{entry.module.label}</strong>
+          </div>
+          <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+            <span className="studio-library-card__origin-badge">
+              {originBadgeLabel}
+            </span>
+            <span className="studio-category-badge">{entry.status}</span>
+          </div>
+        </div>
+        <p
+          style={{
+            margin: 0,
+            fontSize: '0.78rem',
+            color: 'var(--studio-text-secondary)',
+            lineHeight: 1.5,
+          }}
+        >
+          {entry.module.description}
+        </p>
+        <div className="studio-metrics-strip" style={{ flexWrap: 'wrap' }}>
+          <span>التصنيف: {catMeta ? catMeta.labelAr : primaryCatId}</span>
+          <span className="studio-metrics-separator">·</span>
+          <span>المعرف: {entry.id}</span>
+          <span className="studio-metrics-separator">·</span>
+          <span>عائلة: {entry.family}</span>
+        </div>
+        {tags.length > 0 && (
+          <div className="studio-library-card__tags">
+            {tags.slice(0, 6).map((tag) => (
+              <span key={tag} className="studio-library-card__tag">
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </button>
+    );
+  };
+
+  const renderOriginSection = (
+    origin: ElementOriginGroup,
+    sectionTitle: string,
+    sectionSubtitle: string,
+    items: RegisteredElementEntry[]
+  ) => {
+    if (items.length === 0) {
+      return null;
+    }
+    return (
+      <div
+        key={origin}
+        className="studio-origin-section"
+        data-testid={`library-origin-group-${origin}`}
+      >
+        <div className="studio-origin-section__header">
+          <div className="studio-origin-section__title-wrap">
+            <strong className="studio-origin-section__title">{sectionTitle}</strong>
+            <span className="studio-category-badge">{items.length}</span>
+          </div>
+          <span className="studio-panel-meta">{sectionSubtitle}</span>
+        </div>
+        <div className="studio-library-grid">{items.map(renderLibraryCardItem)}</div>
+      </div>
+    );
+  };
+
+  const nativeFiltered = filteredEntries.filter(
+    (e) => resolveElementOriginGroup(e) === 'native'
+  );
+  const importedFiltered = filteredEntries.filter(
+    (e) => resolveElementOriginGroup(e) === 'imported'
+  );
+  const templateFiltered = filteredEntries.filter(
+    (e) => resolveElementOriginGroup(e) === 'template'
+  );
+
   const renderLibraryPanel = () => (
     <section className="studio-panel" aria-label="منطقة المكتبة">
       <div className="studio-panel-header">
         <div>
-          <h2 className="studio-panel-title">مكتبة الوحدات المسجلة (Library)</h2>
+          <h2 className="studio-panel-title">مكتبة العناصر المنظمة (Element Library)</h2>
           <div className="studio-panel-meta">
-            الوحدات المتاحة: {registeredEntries.length} (عنصر Card الإنتاجي + Contract Probe)
+            إجمالي العناصر المسجلة ديناميكيًا من السجل: {registeredEntries.length} عنصرًا ضمن{' '}
+            {LIBRARY_CATEGORIES.length} تصنيفات قياسية
           </div>
         </div>
         <span className="studio-panel-meta">
@@ -289,57 +468,133 @@ export const AppShell: React.FC = () => {
         </span>
       </div>
 
-      <div className="studio-panel-body">
-        <div className="studio-library-grid">
-          {registeredEntries.map((entry) => {
-            const isSelected = activeInstance.elementType === entry.id;
+      <div
+        className="studio-panel-body"
+        style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}
+      >
+        {/* Fast Search by Element Name, ID, or Tag */}
+        <div className="studio-library-search-bar">
+          <span className="studio-library-search-icon" aria-hidden="true">
+            ⌕
+          </span>
+          <input
+            type="search"
+            className="studio-library-search-input"
+            aria-label="بحث سريع في مكتبة العناصر بالاسم أو الوسم"
+            data-testid="library-search-input"
+            placeholder="ابحث بالاسم أو المعرف أو الوسم (مثال: button, carousel, hero, auth, glass, neon)..."
+            value={librarySearchQuery}
+            onChange={(e) => setLibrarySearchQuery(e.target.value)}
+          />
+          {librarySearchQuery.trim() !== '' && (
+            <button
+              type="button"
+              className="studio-btn studio-btn-reset"
+              onClick={() => setLibrarySearchQuery('')}
+            >
+              مسح البحث ✕
+            </button>
+          )}
+        </div>
+
+        {/* Category Filter Tabs (All + 9 Mandatory Categories with independent badges) */}
+        <div
+          role="tablist"
+          aria-label="تصنيفات مكتبة العناصر"
+          data-testid="library-category-tabs"
+          className="studio-category-bar"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={selectedLibraryCategory === 'all'}
+            className="studio-category-tab"
+            data-active={selectedLibraryCategory === 'all'}
+            data-testid="library-category-tab-all"
+            onClick={() => setSelectedLibraryCategory('all')}
+          >
+            <span>الكل</span>
+            <span className="studio-category-badge">{categoryCounts.all}</span>
+          </button>
+
+          {LIBRARY_CATEGORIES.map((cat) => {
+            const count = categoryCounts[cat.id] ?? 0;
+            const isSelected = selectedLibraryCategory === cat.id;
             return (
               <button
-                key={entry.id}
+                key={cat.id}
                 type="button"
-                className="studio-library-card"
-                data-selected={isSelected}
-                data-testid={`library-card-${entry.id}`}
-                onClick={() => handleSelectLibraryElement(entry.id)}
+                role="tab"
+                aria-selected={isSelected}
+                className="studio-category-tab"
+                data-active={isSelected}
+                data-testid={`library-category-tab-${cat.id}`}
+                title={cat.examplesText}
+                onClick={() => setSelectedLibraryCategory(cat.id)}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '0.5rem',
-                    width: '100%',
-                  }}
-                >
-                  <strong style={{ fontSize: '0.88rem' }}>{entry.module.label}</strong>
-                  <span className="studio-panel-meta">حالة: {entry.status}</span>
-                </div>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: '0.78rem',
-                    color: 'var(--studio-text-secondary)',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {entry.module.description}
-                </p>
-                <div className="studio-metrics-strip">
-                  <span>المعرف: {entry.id}</span>
-                  <span className="studio-metrics-separator">·</span>
-                  <span>الإصدار: v{entry.module.version}</span>
-                  <span className="studio-metrics-separator">·</span>
-                  <span>عائلة: {entry.family}</span>
-                </div>
+                <span>{cat.labelAr}</span>
+                <span className="studio-category-badge">{count}</span>
               </button>
             );
           })}
         </div>
 
+        {/* Filtered Results Separated clearly by Origin (Native vs Imported vs Templates) */}
+        {filteredEntries.length === 0 ? (
+          <div
+            data-testid="library-empty-state"
+            style={{
+              padding: '1rem',
+              borderRadius: 'var(--studio-radius-md)',
+              border: '1px dashed var(--studio-border-subtle)',
+              textAlign: 'center',
+              color: 'var(--studio-text-secondary)',
+              fontSize: '0.82rem',
+            }}
+          >
+            لا توجد عناصر مطابقة في هذا التصنيف أو البحث حاليًا.
+            {selectedLibraryCategory !== 'all' && (
+              <div style={{ marginTop: '0.45rem' }}>
+                <button
+                  type="button"
+                  className="studio-btn"
+                  onClick={() => {
+                    setSelectedLibraryCategory('all');
+                    setLibrarySearchQuery('');
+                  }}
+                >
+                  عرض جميع العناصر المسجلة ({categoryCounts.all})
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {renderOriginSection(
+              'native',
+              'العناصر الأصلية في الاستوديو (Studio Native Elements)',
+              'وحدات إنتاجية مستقلة قابلة للتخصيص الكامل',
+              nativeFiltered
+            )}
+            {renderOriginSection(
+              'imported',
+              'العناصر المستوردة المعزولة (Imported HTML/CSS Components)',
+              'عزل داخل Sandbox Iframe مع طبقة Overrides مستقلة',
+              importedFiltered
+            )}
+            {renderOriginSection(
+              'template',
+              'القوالب الجاهزة (Templates)',
+              'تركيبات متعددة العناصر قابلة للتعديل',
+              templateFiltered
+            )}
+          </div>
+        )}
+
         {/* Instance Selector */}
         <div
           style={{
-            marginTop: '0.875rem',
+            marginTop: '0.4rem',
             paddingTop: '0.875rem',
             borderTop: '1px solid var(--studio-border-subtle)',
             display: 'flex',
@@ -350,9 +605,9 @@ export const AppShell: React.FC = () => {
           }}
         >
           <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-            النسخ المعزولة (Element Instances):
+            النسخ المعزولة النشطة (Element Instances):
           </span>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
             {Object.values(studioState.instances).map((inst) => (
               <button
                 key={inst.id}
@@ -392,8 +647,112 @@ export const AppShell: React.FC = () => {
       onResetAll: resetActiveInstance,
     };
 
+    if (activeInstance.elementType === BUTTON_ELEMENT_ID) {
+      return (
+        <ButtonInspector
+          state={activeInstance.state}
+          onUpdateContentField={updateContentField}
+          onUpdateIcon={updateIcon}
+          onUpdateDimensions={updateDimensions}
+          onUpdateButtonData={updateButtonData}
+          onUpdateButtonStateStyle={updateButtonStateStyle}
+          onResetAll={resetActiveInstance}
+        />
+      );
+    }
+
     if (activeInstance.elementType === CARD_ELEMENT_ID) {
       return <CardInspector {...sharedProps} />;
+    }
+
+    if (activeInstance.elementType === CAROUSEL_ELEMENT_ID) {
+      return (
+        <CarouselInspector
+          state={activeInstance.state}
+          onUpdateDimensions={updateDimensions}
+          onUpdateSurface={updateSurface}
+          onUpdateCarouselData={updateCarouselData}
+          onUpdateCarouselSlideField={updateCarouselSlideField}
+          onUpdateCarouselSlideMeta={updateCarouselSlideMeta}
+          onAddCarouselSlide={addCarouselSlide}
+          onRemoveCarouselSlide={removeCarouselSlide}
+          onResetAll={resetActiveInstance}
+        />
+      );
+    }
+
+    if (activeInstance.elementType === HERO_ELEMENT_ID) {
+      return (
+        <HeroInspector
+          state={activeInstance.state}
+          onUpdateContentField={updateContentField}
+          onUpdateIcon={updateIcon}
+          onUpdateDimensions={updateDimensions}
+          onUpdateHeroData={updateHeroData}
+          onUpdateHeroAction={updateHeroAction}
+          onResetAll={resetActiveInstance}
+        />
+      );
+    }
+
+    if (activeInstance.elementType === SOCIAL_DOCK_ELEMENT_ID) {
+      return (
+        <SocialDockInspector
+          state={activeInstance.state}
+          onUpdateContentField={updateContentField}
+          onUpdateDimensions={updateDimensions}
+          onUpdateSocialDockData={updateSocialDockData}
+          onUpdateSocialDockItem={updateSocialDockItem}
+          onAddSocialDockItem={addSocialDockItem}
+          onRemoveSocialDockItem={removeSocialDockItem}
+          onResetAll={resetActiveInstance}
+        />
+      );
+    }
+
+    if (activeInstance.elementType === BRAND_IDENTITY_ELEMENT_ID) {
+      return (
+        <BrandIdentityInspector
+          state={activeInstance.state}
+          onUpdateContentField={updateContentField}
+          onUpdateDimensions={updateDimensions}
+          onUpdateSurface={updateSurface}
+          onUpdateBrandIdentityData={updateBrandIdentityData}
+          onResetAll={resetActiveInstance}
+        />
+      );
+    }
+
+    if (activeInstance.elementType === AUTH_FORM_ELEMENT_ID) {
+      return (
+        <AuthFormInspector
+          state={activeInstance.state}
+          onUpdateContentField={updateContentField}
+          onUpdateDimensions={updateDimensions}
+          onUpdateAuthFormData={updateAuthFormData}
+          onUpdateAuthFormField={updateAuthFormField}
+          onResetAll={resetActiveInstance}
+        />
+      );
+    }
+
+    if (activeInstance.elementType === IMPORTED_COMPONENT_ID) {
+      return (
+        <ImportedComponentInspector
+          instanceId={activeInstance.id}
+          scopeId={activeInstance.scopeId}
+          state={activeInstance.state}
+          exportBundle={exportBundle}
+          onUpdateSource={updateImportedSource}
+          onRestoreOriginalSource={restoreImportedOriginalSource}
+          onClearSource={clearImportedSource}
+          onUpdateOverrides={updateImportedOverrides}
+          onUpdateMappedOverrides={updateImportedMappedOverrides}
+          onResetOverrides={resetImportedOverrides}
+          onUpdateMapping={updateImportedMapping}
+          onResetMapping={resetImportedMapping}
+        />
+      );
     }
 
     return <ContractProbeInspector {...sharedProps} />;

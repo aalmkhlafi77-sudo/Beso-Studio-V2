@@ -131,7 +131,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
               data-active={previewState.activeOutputTab === 'validation'}
               onClick={() => onUpdatePreviewState({ activeOutputTab: 'validation' })}
             >
-              التحقق ({exportBundle.validationErrors.length})
+              التحقق والتحذيرات ({exportBundle.validationErrors.length + exportBundle.warnings.length})
             </button>
           </div>
 
@@ -184,6 +184,28 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
                       <strong>{err.code}</strong> ({err.field}): {err.message}
                     </div>
                   ))
+                )}
+
+                {exportBundle.warnings.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div className="studio-panel-meta">
+                      التحذيرات المرصودة في حزمة التصدير (Warnings: {exportBundle.warnings.length}):
+                    </div>
+                    {exportBundle.warnings.map((warn, idx) => (
+                      <div
+                        key={`${warn.code}-${idx}`}
+                        style={{
+                          padding: '0.7rem 0.95rem',
+                          borderRadius: 'var(--studio-radius-sm)',
+                          backgroundColor: 'var(--studio-bg-elevated)',
+                          border: '1px solid var(--studio-accent)',
+                          fontSize: '0.82rem',
+                        }}
+                      >
+                        <strong>[{warn.code}]</strong>: {warn.message}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}

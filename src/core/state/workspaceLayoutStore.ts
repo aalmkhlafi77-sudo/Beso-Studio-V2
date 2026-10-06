@@ -312,6 +312,11 @@ export function countAccordionGroupModifications(
     }
     case 'appearance-basic': {
       const keys: Array<keyof DeclaredSurfaceTokens> = [
+        'materialType',
+        'primaryColor',
+        'secondaryColor',
+        'gradientDirection',
+        'opacity',
         'backgroundColor',
         'borderColor',
         'accentColor',
@@ -323,6 +328,13 @@ export function countAccordionGroupModifications(
     }
     case 'appearance-advanced': {
       const keys: Array<keyof DeclaredSurfaceTokens> = [
+        'glassBlur',
+        'glowIntensity',
+        'glowColor',
+        'shadowIntensity',
+        'shadowColor',
+        'patternType',
+        'imageSourceUrl',
         'badgeBackgroundColor',
         'iconContainerBackground',
         'borderWidth',

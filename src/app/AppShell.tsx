@@ -25,6 +25,8 @@ import {
   updateInstanceIcon,
 } from '../core/state/studioStore';
 import { WORKSPACE_LAYOUT_BOUNDS } from '../core/state/workspaceLayoutStore';
+import { CardInspector } from '../elements/card/CardInspector';
+import { CARD_ELEMENT_ID } from '../elements/card/cardModule';
 import { ContractProbeInspector } from '../elements/contract-probe/ContractProbeInspector';
 import { STUDIO_THEMES, StudioThemeMode } from '../shared/theme/themeTokens';
 import { AdSlot, resolveAdSlotRenderDecision } from '../shared/ui/AdSlot';
@@ -264,13 +266,22 @@ export const AppShell: React.FC = () => {
 
   const verificationItems = runInBrowserContractChecks();
 
+  const handleSelectLibraryElement = (elementId: string) => {
+    const matchingInstance = Object.values(studioState.instances).find(
+      (inst) => inst.elementType === elementId
+    );
+    if (matchingInstance) {
+      selectInstance(matchingInstance.id);
+    }
+  };
+
   const renderLibraryPanel = () => (
-    <section className="studio-panel" aria-label="منطقة المكتبة التجريبية">
+    <section className="studio-panel" aria-label="منطقة المكتبة">
       <div className="studio-panel-header">
         <div>
           <h2 className="studio-panel-title">مكتبة الوحدات المسجلة (Library)</h2>
           <div className="studio-panel-meta">
-            المرحلة الأولى: مسجل فيها عنصر التحقق من العقد فقط ({registeredEntries.length} وحدة)
+            الوحدات المتاحة: {registeredEntries.length} (عنصر Card الإنتاجي + Contract Probe)
           </div>
         </div>
         <span className="studio-panel-meta">
@@ -280,38 +291,49 @@ export const AppShell: React.FC = () => {
 
       <div className="studio-panel-body">
         <div className="studio-library-grid">
-          {registeredEntries.map((entry) => (
-            <div key={entry.id} className="studio-library-card" data-selected="true">
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.5rem',
-                }}
+          {registeredEntries.map((entry) => {
+            const isSelected = activeInstance.elementType === entry.id;
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                className="studio-library-card"
+                data-selected={isSelected}
+                data-testid={`library-card-${entry.id}`}
+                onClick={() => handleSelectLibraryElement(entry.id)}
               >
-                <strong style={{ fontSize: '0.88rem' }}>{entry.module.label}</strong>
-                <span className="studio-panel-meta">حالة: {entry.status}</span>
-              </div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: '0.78rem',
-                  color: 'var(--studio-text-secondary)',
-                  lineHeight: 1.5,
-                }}
-              >
-                {entry.module.description}
-              </p>
-              <div className="studio-metrics-strip">
-                <span>المعرف: {entry.id}</span>
-                <span className="studio-metrics-separator">·</span>
-                <span>الإصدار: v{entry.module.version}</span>
-                <span className="studio-metrics-separator">·</span>
-                <span>عائلة: {entry.family}</span>
-              </div>
-            </div>
-          ))}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '0.5rem',
+                    width: '100%',
+                  }}
+                >
+                  <strong style={{ fontSize: '0.88rem' }}>{entry.module.label}</strong>
+                  <span className="studio-panel-meta">حالة: {entry.status}</span>
+                </div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: '0.78rem',
+                    color: 'var(--studio-text-secondary)',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {entry.module.description}
+                </p>
+                <div className="studio-metrics-strip">
+                  <span>المعرف: {entry.id}</span>
+                  <span className="studio-metrics-separator">·</span>
+                  <span>الإصدار: v{entry.module.version}</span>
+                  <span className="studio-metrics-separator">·</span>
+                  <span>عائلة: {entry.family}</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Instance Selector */}
@@ -348,28 +370,34 @@ export const AppShell: React.FC = () => {
     </section>
   );
 
-  const renderInspectorPanel = () => (
-    <ContractProbeInspector
-      state={activeInstance.state}
-      defaultState={activeModule.defaultState}
-      accordionState={inspectorAccordions}
-      onSelectSection={selectInspectorSection}
-      onToggleAccordionGroup={toggleAccordionGroup}
-      onExpandAllInSection={expandAllGroupsInSection}
-      onCollapseAllInSection={collapseAllGroupsInSection}
-      onUpdateContentField={updateContentField}
-      onResetContentField={resetContentField}
-      onUpdateIcon={updateIcon}
-      onResetIconField={resetIconField}
-      onUpdateDimensions={updateDimensions}
-      onResetDimensionField={resetDimensionField}
-      onUpdateSurface={updateSurface}
-      onResetSurfaceField={resetSurfaceField}
-      onResetAccordionGroup={resetAccordionGroup}
-      onResetCategorySection={resetCategorySection}
-      onResetAll={resetActiveInstance}
-    />
-  );
+  const renderInspectorPanel = () => {
+    const sharedProps = {
+      state: activeInstance.state,
+      defaultState: activeModule.defaultState,
+      accordionState: inspectorAccordions,
+      onSelectSection: selectInspectorSection,
+      onToggleAccordionGroup: toggleAccordionGroup,
+      onExpandAllInSection: expandAllGroupsInSection,
+      onCollapseAllInSection: collapseAllGroupsInSection,
+      onUpdateContentField: updateContentField,
+      onResetContentField: resetContentField,
+      onUpdateIcon: updateIcon,
+      onResetIconField: resetIconField,
+      onUpdateDimensions: updateDimensions,
+      onResetDimensionField: resetDimensionField,
+      onUpdateSurface: updateSurface,
+      onResetSurfaceField: resetSurfaceField,
+      onResetAccordionGroup: resetAccordionGroup,
+      onResetCategorySection: resetCategorySection,
+      onResetAll: resetActiveInstance,
+    };
+
+    if (activeInstance.elementType === CARD_ELEMENT_ID) {
+      return <CardInspector {...sharedProps} />;
+    }
+
+    return <ContractProbeInspector {...sharedProps} />;
+  };
 
   return (
     <div

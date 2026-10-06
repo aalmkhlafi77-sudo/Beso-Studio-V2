@@ -20,6 +20,12 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { DEFAULT_ADMIN_CONFIG } from '../../admin/configSchema';
 import {
+  CARD_DEFAULT_STATE,
+  CARD_ELEMENT_ID,
+  CARD_MATERIAL_OPTIONS,
+  cardModule,
+} from '../../elements/card/cardModule';
+import {
   CONTRACT_PROBE_DEFAULT_STATE,
   CONTRACT_PROBE_ID,
   contractProbeModule,
@@ -41,10 +47,12 @@ import {
   resizeStudioWorkspaceColumns,
   setFullscreenDrawerTab,
   setStudioPreviewMode,
+  setStudioThemeMode,
   toggleInspectorAccordionGroup,
   updateInstanceContentField,
   updateInstanceDimensions,
   updateInstanceIcon,
+  updateInstanceSurface,
 } from '../state/studioStore';
 import {
   countAccordionGroupModifications,
@@ -53,13 +61,23 @@ import {
 } from '../state/workspaceLayoutStore';
 
 describe('Beso Studio V2 — Core & Workspace Contract Tests', () => {
-  it('1. اختبار تسجيل العنصر (Element Registration Test)', () => {
+  it('1. اختبار تسجيل العنصر (Element Registration Test — Card & Contract Probe)', () => {
     const registry = createPhaseOneRegistry();
     const allElements = listRegisteredElements(registry);
+    const stableElements = listRegisteredElements(registry, 'stable');
+    const experimentalElements = listRegisteredElements(registry, 'experimental');
 
-    assert.equal(allElements.length, 1);
-    assert.equal(allElements[0].id, CONTRACT_PROBE_ID);
-    assert.equal(allElements[0].status, 'experimental');
+    assert.equal(allElements.length, 2);
+    assert.equal(stableElements.length, 1);
+    assert.equal(stableElements[0].id, CARD_ELEMENT_ID);
+    assert.equal(experimentalElements.length, 1);
+    assert.equal(experimentalElements[0].id, CONTRACT_PROBE_ID);
+
+    const card = getElementModule(registry, CARD_ELEMENT_ID);
+    assert.ok(card, 'Card module must be retrievable from registry');
+    assert.equal(card.id, 'card');
+    assert.equal(card.type, 'card');
+    assert.equal(card.metadata.isProductionReady, true);
 
     const probe = getElementModule(registry, CONTRACT_PROBE_ID);
     assert.ok(probe, 'Contract Probe module must be retrievable from registry');
@@ -302,7 +320,7 @@ describe('Beso Studio V2 — Core & Workspace Contract Tests', () => {
   it('9. اختبار عداد القيم المعدلة وإعادة ضبط المجموعة والقسم والعنصر (Modified Counter & Multi-Level Reset)', () => {
     const registry = createPhaseOneRegistry();
     const state0 = createInitialStudioState(registry);
-    const id = state0.activeInstanceId;
+    const id = 'probe-instance-1';
 
     assert.equal(
       countSectionModifications(
@@ -477,5 +495,128 @@ describe('Beso Studio V2 — Core & Workspace Contract Tests', () => {
       studioCss,
       /@media\s*\(max-width:\s*1023px\)\s*\{[\s\S]*?\.studio-preview-sticky-unit\s*\{[\s\S]*?position:\s*static;/
     );
+  });
+
+  it('12. اختبار عنصر Card الإنتاجي: استقلال جميع الحقول النصية السبعة (Card Content Fields Independence)', () => {
+    const state0 = createInitialStudioState();
+    const cardId = 'card-instance-1';
+    const initialContent = state0.instances[cardId].state.content;
+
+    const afterTitle = updateInstanceContentField(state0, cardId, 'title', {
+      value: 'بطاقة استثمارية مخصصة',
+      color: '#ffd700',
+    });
+    assert.equal(afterTitle.instances[cardId].state.content.title.value, 'بطاقة استثمارية مخصصة');
+    assert.deepEqual(
+      afterTitle.instances[cardId].state.content.description,
+      initialContent.description
+    );
+    assert.deepEqual(afterTitle.instances[cardId].state.content.number, initialContent.number);
+    assert.deepEqual(
+      afterTitle.instances[cardId].state.content.percentage,
+      initialContent.percentage
+    );
+    assert.deepEqual(afterTitle.instances[cardId].state.content.analysis, initialContent.analysis);
+    assert.deepEqual(
+      afterTitle.instances[cardId].state.content.actionLabel,
+      initialContent.actionLabel
+    );
+    assert.deepEqual(afterTitle.instances[cardId].state.content.badge, initialContent.badge);
+  });
+
+  it('13. اختبار عنصر Card: استقلال الخامة عن النصوص والأيقونة، واستقلال اللون الأساسي عن الثانوي (Card Material & Color Independence)', () => {
+    const state0 = createInitialStudioState();
+    const cardId = 'card-instance-1';
+
+    const beforeContent = state0.instances[cardId].state.content;
+    const beforeIcon = state0.instances[cardId].state.icon;
+    const beforeSecondaryColor = state0.instances[cardId].state.surface.secondaryColor;
+
+    // 1. Change primaryColor -> secondaryColor must NOT change
+    const afterPrimary = updateInstanceSurface(state0, cardId, {
+      primaryColor: '#1a4731',
+    });
+    assert.equal(afterPrimary.instances[cardId].state.surface.primaryColor, '#1a4731');
+    assert.equal(
+      afterPrimary.instances[cardId].state.surface.secondaryColor,
+      beforeSecondaryColor
+    );
+
+    // 2. Change secondaryColor -> primaryColor must remain '#1a4731'
+    const afterSecondary = updateInstanceSurface(afterPrimary, cardId, {
+      secondaryColor: '#2d6a4f',
+    });
+    assert.equal(afterSecondary.instances[cardId].state.surface.primaryColor, '#1a4731');
+    assert.equal(afterSecondary.instances[cardId].state.surface.secondaryColor, '#2d6a4f');
+
+    // 3. Change materialType across all 9 materials -> text fields and icon must NOT change
+    let current = afterSecondary;
+    for (const mat of CARD_MATERIAL_OPTIONS) {
+      current = updateInstanceSurface(current, cardId, {
+        materialType: mat.value,
+      });
+      assert.equal(current.instances[cardId].state.surface.materialType, mat.value);
+      assert.deepEqual(current.instances[cardId].state.content, beforeContent);
+      assert.deepEqual(current.instances[cardId].state.icon, beforeIcon);
+    }
+
+    // 4. Change Icon -> surface material and colors must NOT change
+    const surfaceBeforeIconChange = current.instances[cardId].state.surface;
+    const afterIcon = updateInstanceIcon(current, cardId, {
+      source: 'emoji',
+      value: '💎',
+      color: '#38bdf8',
+      size: 38,
+      rotate: 30,
+      position: 'center',
+    });
+    assert.deepEqual(afterIcon.instances[cardId].state.surface, surfaceBeforeIconChange);
+  });
+
+  it('14. اختبار عنصر Card: استقلال العرض عن الارتفاع، وتوليد HTML/CSS نظيف للخامات التسع في الوضعين البصريين (Card Dimensions, Clean Export & Both Themes)', () => {
+    let state = createInitialStudioState();
+    const cardId = 'card-instance-1';
+
+    const origHeight = state.instances[cardId].state.dimensions.height;
+    state = updateInstanceDimensions(state, cardId, { width: 620 });
+    assert.equal(state.instances[cardId].state.dimensions.width, 620);
+    assert.equal(state.instances[cardId].state.dimensions.height, origHeight);
+
+    state = updateInstanceDimensions(state, cardId, { height: 480 });
+    assert.equal(state.instances[cardId].state.dimensions.width, 620);
+    assert.equal(state.instances[cardId].state.dimensions.height, 480);
+
+    // Test both studio themes ('emerald-luxury' and 'ivory-pearl') and all 9 materials
+    const themes: Array<'emerald-luxury' | 'ivory-pearl'> = ['emerald-luxury', 'ivory-pearl'];
+    for (const theme of themes) {
+      state = setStudioThemeMode(state, theme);
+      assert.equal(state.theme, theme);
+
+      for (const mat of CARD_MATERIAL_OPTIONS) {
+        state = updateInstanceSurface(state, cardId, { materialType: mat.value });
+        const inst = state.instances[cardId];
+        const input = {
+          instanceId: inst.id,
+          scopeId: inst.scopeId,
+          state: inst.state,
+        };
+
+        const preview = cardModule.renderPreview(input);
+        const bundle = cardModule.generateCode(input);
+
+        assert.equal(preview.html, bundle.html);
+        assert.equal(preview.css, bundle.css);
+        assert.equal(bundle.html.includes(`data-card-material="${mat.value}"`), true);
+        assert.equal(bundle.css.includes(`[data-element-scope="${inst.scopeId}"]`), true);
+        assert.equal(/\bundefined\b/.test(bundle.html), false);
+        assert.equal(/\bNaN\b/.test(bundle.html), false);
+        assert.equal(/\bundefined\b/.test(bundle.css), false);
+        assert.equal(/\bNaN\b/.test(bundle.css), false);
+        assert.equal(bundle.validationErrors.length, 0);
+      }
+    }
+
+    // Verify CARD_DEFAULT_STATE is valid
+    assert.equal(cardModule.validate(CARD_DEFAULT_STATE).valid, true);
   });
 });

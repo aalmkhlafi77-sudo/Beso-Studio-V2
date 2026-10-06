@@ -11,6 +11,11 @@
 
 import { AdminConfig, DEFAULT_ADMIN_CONFIG } from '../../admin/configSchema';
 import {
+  CARD_DEFAULT_STATE,
+  CARD_ELEMENT_ID,
+  cardRegistration,
+} from '../../elements/card/cardModule';
+import {
   CONTRACT_PROBE_DEFAULT_STATE,
   CONTRACT_PROBE_ID,
   contractProbeRegistration,
@@ -74,48 +79,63 @@ export interface StudioState {
 }
 
 /**
- * Creates the Phase 1 ElementRegistry containing ONLY Contract Probe.
+ * Creates the Studio ElementRegistry containing the production Card element and Contract Probe.
  */
 export function createPhaseOneRegistry(): ElementRegistry {
   const empty = createEmptyRegistry();
-  return registerElement(empty, contractProbeRegistration);
+  const withCard = registerElement(empty, cardRegistration);
+  return registerElement(withCard, contractProbeRegistration);
 }
 
 export function createInitialStudioState(
   registry: ElementRegistry = createPhaseOneRegistry()
 ): StudioState {
+  const cardMod = getElementModule(registry, CARD_ELEMENT_ID);
+  const initialCardState = cardMod
+    ? cloneElementState(cardMod.defaultState)
+    : cloneElementState(CARD_DEFAULT_STATE);
+
   const probeModule = getElementModule(registry, CONTRACT_PROBE_ID);
-  const initialElementState = probeModule
+  const initialProbeState = probeModule
     ? cloneElementState(probeModule.defaultState)
     : cloneElementState(CONTRACT_PROBE_DEFAULT_STATE);
 
-  const primaryInstanceId = 'probe-instance-1';
-  const secondaryInstanceId = 'probe-instance-2';
+  const cardInstanceId = 'card-instance-1';
+  const primaryProbeInstanceId = 'probe-instance-1';
+  const secondaryProbeInstanceId = 'probe-instance-2';
 
-  const secondaryState = cloneElementState(initialElementState);
-  secondaryState.content.title.value = 'نسخة معزولة ثانية (Instance #2)';
-  secondaryState.content.number.value = '2,950';
-  secondaryState.dimensions.width = 400;
-  secondaryState.dimensions.height = 300;
+  const secondaryProbeState = cloneElementState(initialProbeState);
+  secondaryProbeState.content.title.value = 'نسخة معزولة ثانية (Instance #2)';
+  secondaryProbeState.content.number.value = '2,950';
+  secondaryProbeState.dimensions.width = 400;
+  secondaryProbeState.dimensions.height = 300;
 
   return {
-    activeInstanceId: primaryInstanceId,
+    activeInstanceId: cardInstanceId,
     instances: {
-      [primaryInstanceId]: {
-        id: primaryInstanceId,
-        label: 'مسبار العقد #1 (الرئيسي)',
+      [cardInstanceId]: {
+        id: cardInstanceId,
+        label: 'البطاقة الإنتاجية #1 (Card)',
+        elementType: CARD_ELEMENT_ID,
+        scopeId: 'beso-card-1',
+        stateVersion: 1,
+        state: initialCardState,
+      },
+      [primaryProbeInstanceId]: {
+        id: primaryProbeInstanceId,
+        label: 'مسبار العقد #1 (Contract Probe)',
         elementType: CONTRACT_PROBE_ID,
         scopeId: 'beso-probe-1',
         stateVersion: 1,
-        state: initialElementState,
+        state: initialProbeState,
       },
-      [secondaryInstanceId]: {
-        id: secondaryInstanceId,
+      [secondaryProbeInstanceId]: {
+        id: secondaryProbeInstanceId,
         label: 'مسبار العقد #2 (اختبار عزل النسخ)',
         elementType: CONTRACT_PROBE_ID,
         scopeId: 'beso-probe-2',
         stateVersion: 1,
-        state: secondaryState,
+        state: secondaryProbeState,
       },
     },
     theme: 'emerald-luxury',
@@ -671,6 +691,11 @@ export function resetInstanceAccordionGroup(
       break;
     }
     case 'appearance-basic': {
+      next.surface.materialType = def.surface.materialType;
+      next.surface.primaryColor = def.surface.primaryColor;
+      next.surface.secondaryColor = def.surface.secondaryColor;
+      next.surface.gradientDirection = def.surface.gradientDirection;
+      next.surface.opacity = def.surface.opacity;
       next.surface.backgroundColor = def.surface.backgroundColor;
       next.surface.borderColor = def.surface.borderColor;
       next.surface.accentColor = def.surface.accentColor;
@@ -680,6 +705,13 @@ export function resetInstanceAccordionGroup(
       break;
     }
     case 'appearance-advanced': {
+      next.surface.glassBlur = def.surface.glassBlur;
+      next.surface.glowIntensity = def.surface.glowIntensity;
+      next.surface.glowColor = def.surface.glowColor;
+      next.surface.shadowIntensity = def.surface.shadowIntensity;
+      next.surface.shadowColor = def.surface.shadowColor;
+      next.surface.patternType = def.surface.patternType;
+      next.surface.imageSourceUrl = def.surface.imageSourceUrl;
       next.surface.badgeBackgroundColor = def.surface.badgeBackgroundColor;
       next.surface.iconContainerBackground = def.surface.iconContainerBackground;
       next.surface.borderWidth = def.surface.borderWidth;

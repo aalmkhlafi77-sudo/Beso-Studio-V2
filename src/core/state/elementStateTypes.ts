@@ -73,7 +73,40 @@ export interface IndependentDimensions {
   lockAspectRatio: boolean;
 }
 
+export type CardMaterialType =
+  | 'solid'
+  | 'gradient'
+  | 'glass'
+  | 'metal'
+  | 'ivory'
+  | 'neon'
+  | 'dark'
+  | 'image'
+  | 'pattern';
+
+export type GradientDirectionType =
+  | '135deg'
+  | '90deg'
+  | '180deg'
+  | '45deg'
+  | '225deg'
+  | '0deg';
+
+export type PatternPresetType = 'dots' | 'grid' | 'diagonal' | 'waves';
+
 export interface DeclaredSurfaceTokens {
+  materialType: CardMaterialType;
+  primaryColor: ColorValue;
+  secondaryColor: ColorValue;
+  gradientDirection: GradientDirectionType;
+  opacity: number;
+  glassBlur: number;
+  glowIntensity: number;
+  glowColor: ColorValue;
+  shadowIntensity: number;
+  shadowColor: ColorValue;
+  patternType: PatternPresetType;
+  imageSourceUrl: string;
   backgroundColor: ColorValue;
   borderColor: ColorValue;
   accentColor: ColorValue;

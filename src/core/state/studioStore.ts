@@ -16,6 +16,7 @@ import {
   contractProbeRegistration,
 } from '../../elements/contract-probe/contractProbeModule';
 import { StudioThemeMode } from '../../shared/theme/themeTokens';
+import { ControlSectionId } from '../controls/controlTypes';
 import {
   createEmptyRegistry,
   ElementRegistry,
@@ -31,6 +32,19 @@ import {
   IndependentDimensions,
   IndependentElementState,
 } from './elementStateTypes';
+import {
+  ALL_ACCORDION_GROUP_IDS,
+  createInitialInspectorAccordionState,
+  createInitialWorkspaceLayoutState,
+  FullscreenDrawerTab,
+  InspectorAccordionState,
+  PreviewMode,
+  toggleControlsCollapsed,
+  toggleExportCollapsed,
+  updateWorkspaceColumnsWidth,
+  updateWorkspacePreviewHeight,
+  WorkspaceLayoutState,
+} from './workspaceLayoutStore';
 
 export interface PreviewState {
   viewportPresetId: string;
@@ -54,6 +68,8 @@ export interface StudioState {
   selectedTemplateId?: string;
   theme: StudioThemeMode;
   preview: PreviewState;
+  workspaceLayout: WorkspaceLayoutState;
+  inspectorAccordions: InspectorAccordionState;
   admin: AdminConfig;
 }
 
@@ -108,6 +124,8 @@ export function createInitialStudioState(
       activeOutputTab: 'html',
       showGrid: true,
     },
+    workspaceLayout: createInitialWorkspaceLayoutState(),
+    inspectorAccordions: createInitialInspectorAccordionState(),
     admin: {
       ...DEFAULT_ADMIN_CONFIG,
       advertising: {
@@ -511,3 +529,338 @@ export function setAdvertisingSlotEnabled(
     },
   };
 }
+
+/**
+ * Resets an entire major category section ('content' | 'dimensions' | 'icon' | 'appearance')
+ * for the specified instance without altering any other section or workspace layout.
+ */
+export function resetInstanceCategorySection(
+  studioState: StudioState,
+  registry: ElementRegistry,
+  instanceId: string,
+  section: ControlSectionId
+): StudioState {
+  const currentInstance = studioState.instances[instanceId];
+  if (!currentInstance) {
+    return studioState;
+  }
+
+  const module = getElementModule(registry, currentInstance.elementType);
+  const defaults = module ? module.defaultState : CONTRACT_PROBE_DEFAULT_STATE;
+
+  const nextElementState = cloneElementState(currentInstance.state);
+  const clonedDefaults = cloneElementState(defaults);
+
+  if (section === 'content') {
+    nextElementState.content = clonedDefaults.content;
+  } else if (section === 'dimensions') {
+    nextElementState.dimensions = clonedDefaults.dimensions;
+  } else if (section === 'icon') {
+    nextElementState.icon = clonedDefaults.icon;
+  } else if (section === 'appearance') {
+    nextElementState.surface = clonedDefaults.surface;
+  }
+
+  return {
+    ...studioState,
+    instances: {
+      ...studioState.instances,
+      [instanceId]: {
+        ...currentInstance,
+        stateVersion: currentInstance.stateVersion + 1,
+        state: nextElementState,
+      },
+    },
+  };
+}
+
+/**
+ * Resets ONLY the fields belonging to a specific Accordion group without altering other groups.
+ */
+export function resetInstanceAccordionGroup(
+  studioState: StudioState,
+  registry: ElementRegistry,
+  instanceId: string,
+  groupId: string
+): StudioState {
+  const currentInstance = studioState.instances[instanceId];
+  if (!currentInstance) {
+    return studioState;
+  }
+
+  const module = getElementModule(registry, currentInstance.elementType);
+  const defaults = module ? module.defaultState : CONTRACT_PROBE_DEFAULT_STATE;
+
+  const next = cloneElementState(currentInstance.state);
+  const def = cloneElementState(defaults);
+
+  switch (groupId) {
+    case 'content-basic': {
+      const keys: ContentFieldKey[] = ['title', 'description', 'badge', 'actionLabel'];
+      for (const k of keys) {
+        next.content[k] = {
+          ...next.content[k],
+          value: def.content[k].value,
+          visible: def.content[k].visible,
+          color: def.content[k].color,
+        };
+      }
+      break;
+    }
+    case 'content-metrics': {
+      const keys: ContentFieldKey[] = ['number', 'percentage', 'analysis'];
+      for (const k of keys) {
+        next.content[k] = {
+          ...next.content[k],
+          value: def.content[k].value,
+          visible: def.content[k].visible,
+          color: def.content[k].color,
+        };
+      }
+      break;
+    }
+    case 'content-advanced': {
+      const keys: ContentFieldKey[] = [
+        'title',
+        'description',
+        'number',
+        'percentage',
+        'analysis',
+        'actionLabel',
+        'badge',
+      ];
+      for (const k of keys) {
+        next.content[k] = {
+          ...next.content[k],
+          fontFamily: def.content[k].fontFamily,
+          fontSize: def.content[k].fontSize,
+          fontWeight: def.content[k].fontWeight,
+          lineHeight: def.content[k].lineHeight,
+          letterSpacing: def.content[k].letterSpacing,
+          align: def.content[k].align,
+        };
+      }
+      break;
+    }
+    case 'dimensions-basic': {
+      next.dimensions.width = def.dimensions.width;
+      next.dimensions.widthUnit = def.dimensions.widthUnit;
+      next.dimensions.height = def.dimensions.height;
+      next.dimensions.heightUnit = def.dimensions.heightUnit;
+      break;
+    }
+    case 'dimensions-advanced': {
+      next.dimensions.minWidth = def.dimensions.minWidth;
+      next.dimensions.maxWidth = def.dimensions.maxWidth;
+      next.dimensions.minHeight = def.dimensions.minHeight;
+      next.dimensions.maxHeight = def.dimensions.maxHeight;
+      next.dimensions.lockAspectRatio = def.dimensions.lockAspectRatio;
+      break;
+    }
+    case 'icon-basic': {
+      next.icon.visible = def.icon.visible;
+      next.icon.source = def.icon.source;
+      next.icon.value = def.icon.value;
+      next.icon.color = def.icon.color;
+      next.icon.size = def.icon.size;
+      break;
+    }
+    case 'icon-advanced': {
+      next.icon.rotate = def.icon.rotate;
+      next.icon.position = def.icon.position;
+      break;
+    }
+    case 'appearance-basic': {
+      next.surface.backgroundColor = def.surface.backgroundColor;
+      next.surface.borderColor = def.surface.borderColor;
+      next.surface.accentColor = def.surface.accentColor;
+      next.surface.actionBackgroundColor = def.surface.actionBackgroundColor;
+      next.surface.actionTextColor = def.surface.actionTextColor;
+      next.surface.borderRadius = def.surface.borderRadius;
+      break;
+    }
+    case 'appearance-advanced': {
+      next.surface.badgeBackgroundColor = def.surface.badgeBackgroundColor;
+      next.surface.iconContainerBackground = def.surface.iconContainerBackground;
+      next.surface.borderWidth = def.surface.borderWidth;
+      next.surface.paddingX = def.surface.paddingX;
+      next.surface.paddingY = def.surface.paddingY;
+      next.surface.gap = def.surface.gap;
+      break;
+    }
+    default:
+      break;
+  }
+
+  return {
+    ...studioState,
+    instances: {
+      ...studioState.instances,
+      [instanceId]: {
+        ...currentInstance,
+        stateVersion: currentInstance.stateVersion + 1,
+        state: next,
+      },
+    },
+  };
+}
+
+/**
+ * Pure Workspace Layout transitions (never touch instances[id].state)
+ */
+export function resizeStudioWorkspaceColumns(
+  studioState: StudioState,
+  nextControlsWidth: number,
+  totalWorkspaceWidth?: number
+): StudioState {
+  return {
+    ...studioState,
+    workspaceLayout: updateWorkspaceColumnsWidth(
+      studioState.workspaceLayout,
+      nextControlsWidth,
+      totalWorkspaceWidth
+    ),
+  };
+}
+
+export function resizeStudioPreviewHeight(
+  studioState: StudioState,
+  nextPreviewHeight: number
+): StudioState {
+  return {
+    ...studioState,
+    workspaceLayout: updateWorkspacePreviewHeight(studioState.workspaceLayout, nextPreviewHeight),
+  };
+}
+
+export function setStudioPreviewMode(
+  studioState: StudioState,
+  previewMode: PreviewMode
+): StudioState {
+  return {
+    ...studioState,
+    workspaceLayout: {
+      ...studioState.workspaceLayout,
+      previewMode,
+    },
+    inspectorAccordions: {
+      ...studioState.inspectorAccordions,
+      fullscreenDrawerTab:
+        previewMode === 'docked' ? 'none' : studioState.inspectorAccordions.fullscreenDrawerTab,
+    },
+  };
+}
+
+export function setStudioControlsCollapsed(
+  studioState: StudioState,
+  collapsed?: boolean
+): StudioState {
+  return {
+    ...studioState,
+    workspaceLayout: toggleControlsCollapsed(studioState.workspaceLayout, collapsed),
+  };
+}
+
+export function setStudioExportCollapsed(
+  studioState: StudioState,
+  collapsed?: boolean
+): StudioState {
+  return {
+    ...studioState,
+    workspaceLayout: toggleExportCollapsed(studioState.workspaceLayout, collapsed),
+  };
+}
+
+export function resetStudioWorkspaceLayout(studioState: StudioState): StudioState {
+  return {
+    ...studioState,
+    workspaceLayout: createInitialWorkspaceLayoutState(),
+  };
+}
+
+/**
+ * Pure Inspector Accordion transitions (persisted across element state edits)
+ */
+export function setInspectorActiveSection(
+  studioState: StudioState,
+  activeSection: ControlSectionId
+): StudioState {
+  return {
+    ...studioState,
+    inspectorAccordions: {
+      ...studioState.inspectorAccordions,
+      activeSection,
+    },
+  };
+}
+
+export function toggleInspectorAccordionGroup(
+  studioState: StudioState,
+  groupId: string
+): StudioState {
+  const currentOpen = studioState.inspectorAccordions.openGroupIds;
+  const isOpen = currentOpen.includes(groupId);
+  const nextOpen = isOpen
+    ? currentOpen.filter((id) => id !== groupId)
+    : [...currentOpen, groupId];
+
+  return {
+    ...studioState,
+    inspectorAccordions: {
+      ...studioState.inspectorAccordions,
+      openGroupIds: nextOpen,
+    },
+  };
+}
+
+export function expandAllInspectorGroupsInSection(
+  studioState: StudioState,
+  section?: ControlSectionId
+): StudioState {
+  const targetSection = section || studioState.inspectorAccordions.activeSection;
+  const sectionGroups = ALL_ACCORDION_GROUP_IDS[targetSection] || [];
+  const merged = Array.from(
+    new Set([...studioState.inspectorAccordions.openGroupIds, ...sectionGroups])
+  );
+
+  return {
+    ...studioState,
+    inspectorAccordions: {
+      ...studioState.inspectorAccordions,
+      openGroupIds: merged,
+    },
+  };
+}
+
+export function collapseAllInspectorGroupsInSection(
+  studioState: StudioState,
+  section?: ControlSectionId
+): StudioState {
+  const targetSection = section || studioState.inspectorAccordions.activeSection;
+  const sectionGroups = new Set(ALL_ACCORDION_GROUP_IDS[targetSection] || []);
+  const filtered = studioState.inspectorAccordions.openGroupIds.filter(
+    (id) => !sectionGroups.has(id)
+  );
+
+  return {
+    ...studioState,
+    inspectorAccordions: {
+      ...studioState.inspectorAccordions,
+      openGroupIds: filtered,
+    },
+  };
+}
+
+export function setFullscreenDrawerTab(
+  studioState: StudioState,
+  tab: FullscreenDrawerTab
+): StudioState {
+  return {
+    ...studioState,
+    inspectorAccordions: {
+      ...studioState.inspectorAccordions,
+      fullscreenDrawerTab: tab,
+    },
+  };
+}
+

@@ -1,27 +1,34 @@
 /**
- * Beso Studio V2 — Responsive RTL Studio Shell
+ * Beso Studio V2 — Responsive RTL Studio Shell (Task 2: Organized Workspace)
  *
  * Implements:
  * 1. Top Bar Contract (3 clean zones: Brand wordmark, Navigation links, Theme & AdSlot actions).
- * 2. Experimental Library region (displays registered Contract Probe only + instance selector).
- * 3. Experimental Inspector region (independent controls for content, dimensions, icon, and surface).
- * 4. Isolated Preview + React-Independent ExportBundle region.
- * 5. Experimental AdSlot (disabled by default, zero layout impact when disabled).
+ * 2. Organized Inspector with accessible Accordions, modified value counts, and 3-tier resets.
+ * 3. Sticky PreviewStage separated from ExportPanel (only PreviewStage floats on desktop scroll).
+ * 4. Fullscreen Preview Mode ('docked' | 'fullscreen') with Drawer for Library/Inspector/Export
+ *    and Escape key exit without losing any element or accordion state.
+ * 5. Vertical & Horizontal Resize Handles with Pointer Events, keyboard support, and live readouts.
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
+import { ExportPanel } from '../core/preview/ExportPanel';
 import { PreviewAdapter } from '../core/preview/PreviewAdapter';
+import { PreviewStage } from '../core/preview/PreviewStage';
 import { getElementModule, listRegisteredElements } from '../core/registry/elementRegistry';
 import {
   createInitialStudioState,
   resetInstanceContentField,
+  resizeStudioPreviewHeight,
+  resizeStudioWorkspaceColumns,
   updateInstanceContentField,
   updateInstanceDimensions,
   updateInstanceIcon,
 } from '../core/state/studioStore';
+import { WORKSPACE_LAYOUT_BOUNDS } from '../core/state/workspaceLayoutStore';
 import { ContractProbeInspector } from '../elements/contract-probe/ContractProbeInspector';
 import { STUDIO_THEMES, StudioThemeMode } from '../shared/theme/themeTokens';
 import { AdSlot, resolveAdSlotRenderDecision } from '../shared/ui/AdSlot';
+import { WorkspaceResizeHandle } from '../shared/ui/WorkspaceResizeHandle';
 import { useStudio } from './providers';
 import { STUDIO_ROUTES } from './routes';
 
@@ -35,25 +42,6 @@ interface VerificationCheckItem {
 function runInBrowserContractChecks(): VerificationCheckItem[] {
   const initial = createInitialStudioState();
   const instanceId = initial.activeInstanceId;
-  const module = getElementModule(
-    {
-      entries: {
-        [initial.instances[instanceId].elementType]: {
-          id: initial.instances[instanceId].elementType,
-          family: 'probe',
-          categories: ['experimental'],
-          status: 'experimental',
-          module: getElementModule(
-            // Use the active module via studioStore's registry
-            { entries: {} },
-            ''
-          )!,
-        },
-      },
-    },
-    ''
-  );
-  void module;
 
   // 1. Text field independence
   const beforeDesc = initial.instances[instanceId].state.content.description.value;
@@ -124,6 +112,17 @@ function runInBrowserContractChecks(): VerificationCheckItem[] {
       initial.instances[instanceId].state.content.title.value &&
     resetOnlyTitle.instances[instanceId].state.content.number.value === '9,999';
 
+  // 6. Workspace Layout vs Element Dimensions Independence
+  const afterLayoutResize = resizeStudioPreviewHeight(
+    resizeStudioWorkspaceColumns(afterHeightEdit, 620, 1400),
+    560
+  );
+  const layoutIndependent =
+    afterLayoutResize.workspaceLayout.controlsWidth === 620 &&
+    afterLayoutResize.workspaceLayout.previewHeight === 560 &&
+    afterLayoutResize.instances[instanceId].state.dimensions.width === 640 &&
+    afterLayoutResize.instances[instanceId].state.dimensions.height === 510;
+
   return [
     {
       id: 'text-independence',
@@ -139,6 +138,13 @@ function runInBrowserContractChecks(): VerificationCheckItem[] {
       details: `عند تعديل العرض إلى 640px بقي الارتفاع ${origHeight}px، وعند تعديل الارتفاع إلى 510px بقي العرض 640px.`,
     },
     {
+      id: 'workspace-vs-element-independence',
+      title: 'استقلال مقابض تحجيم مساحة العمل عن أبعاد العنصر (Workspace vs Element Dimensions)',
+      passed: layoutIndependent,
+      details:
+        'تغيير عرض لوحة التحكم إلى 620px وارتفاع المعاينة إلى 560px لم يغير عرض العنصر (640px) ولا ارتفاعه (510px).',
+    },
+    {
       id: 'icon-independence',
       title: 'استقلال الأيقونة عن النصوص والأبعاد',
       passed: iconIndependent,
@@ -149,7 +155,8 @@ function runInBrowserContractChecks(): VerificationCheckItem[] {
       id: 'single-field-reset',
       title: 'إعادة ضبط حقل منفرد تعيد ذلك الحقل فقط',
       passed: singleResetPassed,
-      details: 'إعادة ضبط حقل العنوان أعادت العنوان لقيمته الافتراضية وبقي الرقم المعدل (9,999) كما هو.',
+      details:
+        'إعادة ضبط حقل العنوان أعادت العنوان لقيمته الافتراضية وبقي الرقم المعدل (9,999) كما هو.',
     },
     {
       id: 'adslot-default-off',
@@ -176,10 +183,25 @@ export const AppShell: React.FC = () => {
     resetDimensionField,
     updateSurface,
     resetSurfaceField,
+    resetAccordionGroup,
+    resetCategorySection,
     resetActiveInstance,
+    selectInspectorSection,
+    toggleAccordionGroup,
+    expandAllGroupsInSection,
+    collapseAllGroupsInSection,
+    setDrawerTab,
+    resizeColumnsWidth,
+    resizePreviewHeight,
+    setPreviewMode,
+    toggleControlsPanel,
+    toggleExportPanel,
+    resetWorkspaceLayout,
     updatePreviewState,
     toggleAdSlot,
   } = useStudio();
+
+  const workspaceContainerRef = useRef<HTMLElement | null>(null);
 
   const registeredEntries = listRegisteredElements(registry);
   const activeInstance = studioState.instances[studioState.activeInstanceId];
@@ -200,8 +222,118 @@ export const AppShell: React.FC = () => {
 
   const sidebarAdSlot = studioState.admin.advertising.slots[0];
   const betweenSectionsAdSlot = studioState.admin.advertising.slots[1];
+  const { workspaceLayout, inspectorAccordions } = studioState;
+  const isFullscreen = workspaceLayout.previewMode === 'fullscreen';
+  const activeDrawer = inspectorAccordions.fullscreenDrawerTab;
 
   const verificationItems = runInBrowserContractChecks();
+
+  const renderLibraryPanel = () => (
+    <section className="studio-panel" aria-label="منطقة المكتبة التجريبية">
+      <div className="studio-panel-header">
+        <div>
+          <h2 className="studio-panel-title">مكتبة الوحدات المسجلة (Library)</h2>
+          <div className="studio-panel-meta">
+            المرحلة الأولى: مسجل فيها عنصر التحقق من العقد فقط ({registeredEntries.length} وحدة)
+          </div>
+        </div>
+        <span className="studio-panel-meta">
+          الوضع الحالي: {STUDIO_THEMES[studioState.theme].labelEn}
+        </span>
+      </div>
+
+      <div className="studio-panel-body">
+        <div className="studio-library-grid">
+          {registeredEntries.map((entry) => (
+            <div key={entry.id} className="studio-library-card" data-selected="true">
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '0.5rem',
+                }}
+              >
+                <strong style={{ fontSize: '0.88rem' }}>{entry.module.label}</strong>
+                <span className="studio-panel-meta">حالة: {entry.status}</span>
+              </div>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '0.78rem',
+                  color: 'var(--studio-text-secondary)',
+                  lineHeight: 1.5,
+                }}
+              >
+                {entry.module.description}
+              </p>
+              <div className="studio-metrics-strip">
+                <span>المعرف: {entry.id}</span>
+                <span className="studio-metrics-separator">·</span>
+                <span>الإصدار: v{entry.module.version}</span>
+                <span className="studio-metrics-separator">·</span>
+                <span>عائلة: {entry.family}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Instance Selector */}
+        <div
+          style={{
+            marginTop: '0.875rem',
+            paddingTop: '0.875rem',
+            borderTop: '1px solid var(--studio-border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+            النسخ المعزولة (Element Instances):
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {Object.values(studioState.instances).map((inst) => (
+              <button
+                key={inst.id}
+                type="button"
+                className="studio-tab-btn"
+                data-active={studioState.activeInstanceId === inst.id}
+                onClick={() => selectInstance(inst.id)}
+              >
+                {inst.label} (v{inst.stateVersion})
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+
+  const renderInspectorPanel = () => (
+    <ContractProbeInspector
+      state={activeInstance.state}
+      defaultState={activeModule.defaultState}
+      accordionState={inspectorAccordions}
+      onSelectSection={selectInspectorSection}
+      onToggleAccordionGroup={toggleAccordionGroup}
+      onExpandAllInSection={expandAllGroupsInSection}
+      onCollapseAllInSection={collapseAllGroupsInSection}
+      onUpdateContentField={updateContentField}
+      onResetContentField={resetContentField}
+      onUpdateIcon={updateIcon}
+      onResetIconField={resetIconField}
+      onUpdateDimensions={updateDimensions}
+      onResetDimensionField={resetDimensionField}
+      onUpdateSurface={updateSurface}
+      onResetSurfaceField={resetSurfaceField}
+      onResetAccordionGroup={resetAccordionGroup}
+      onResetCategorySection={resetCategorySection}
+      onResetAll={resetActiveInstance}
+    />
+  );
 
   return (
     <div className="studio-shell" data-theme={studioState.theme} dir="rtl">
@@ -234,14 +366,12 @@ export const AppShell: React.FC = () => {
           ))}
         </nav>
 
-        {/* Zone 3: Primary Studio Actions (Theme Switcher & Experimental AdSlot Preview Toggle) */}
+        {/* Zone 3: Primary Studio Actions */}
         <div className="studio-header-actions">
           <button
             type="button"
             className="studio-btn"
-            onClick={() =>
-              toggleAdSlot(sidebarAdSlot.id, !sidebarAdSlot.enabled)
-            }
+            onClick={() => toggleAdSlot(sidebarAdSlot.id, !sidebarAdSlot.enabled)}
             title="المساحات الإعلانية معطلة افتراضيًا؛ يمكنك معاينة الـ Placeholder التجريبي هنا"
           >
             {sidebarAdSlot.enabled
@@ -266,7 +396,7 @@ export const AppShell: React.FC = () => {
         </div>
       </header>
 
-      {/* Optional Between-Sections Experimental AdSlot (Disabled by default, renders null when disabled) */}
+      {/* Optional Between-Sections Experimental AdSlot (Disabled by default) */}
       <AdSlot
         id={betweenSectionsAdSlot.id}
         placement={betweenSectionsAdSlot.placement}
@@ -277,126 +407,56 @@ export const AppShell: React.FC = () => {
         fallback={betweenSectionsAdSlot.fallback}
       />
 
-      {/* ROUTE 1: MAIN STUDIO WORKSPACE */}
+      {/* ROUTE 1: MAIN STUDIO WORKSPACE (DOCKED MODE) */}
       {activeRoute === 'workspace' && (
-        <main className="studio-workspace">
+        <main
+          ref={workspaceContainerRef}
+          className="studio-workspace"
+          data-controls-collapsed={workspaceLayout.controlsCollapsed}
+          style={
+            {
+              '--workspace-controls-width': `${workspaceLayout.controlsWidth}px`,
+            } as React.CSSProperties
+          }
+        >
           {/* Right Column in RTL (First on Mobile): Library + Inspector */}
-          <div className="studio-column-controls">
-            {/* Experimental Library Region */}
-            <section className="studio-panel" aria-label="منطقة المكتبة التجريبية">
-              <div className="studio-panel-header">
-                <div>
-                  <h2 className="studio-panel-title">مكتبة الوحدات المسجلة (Library)</h2>
-                  <div className="studio-panel-meta">
-                    المرحلة الأولى: مسجل فيها عنصر التحقق من العقد فقط ({registeredEntries.length}{' '}
-                    وحدة)
-                  </div>
-                </div>
-                <span className="studio-panel-meta">
-                  الوضع الحالي: {STUDIO_THEMES[studioState.theme].labelEn}
-                </span>
-              </div>
+          {!workspaceLayout.controlsCollapsed && (
+            <div className="studio-column-controls">
+              {renderLibraryPanel()}
 
-              <div className="studio-panel-body">
-                <div className="studio-library-grid">
-                  {registeredEntries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="studio-library-card"
-                      data-selected="true"
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '0.5rem',
-                        }}
-                      >
-                        <strong style={{ fontSize: '0.88rem' }}>{entry.module.label}</strong>
-                        <span className="studio-panel-meta">حالة: {entry.status}</span>
-                      </div>
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: '0.78rem',
-                          color: 'var(--studio-text-secondary)',
-                          lineHeight: 1.5,
-                        }}
-                      >
-                        {entry.module.description}
-                      </p>
-                      <div className="studio-metrics-strip">
-                        <span>المعرف: {entry.id}</span>
-                        <span className="studio-metrics-separator">·</span>
-                        <span>الإصدار: v{entry.module.version}</span>
-                        <span className="studio-metrics-separator">·</span>
-                        <span>عائلة: {entry.family}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              {/* Experimental Sidebar AdSlot (Disabled by default) */}
+              <AdSlot
+                id={sidebarAdSlot.id}
+                placement={sidebarAdSlot.placement}
+                width={sidebarAdSlot.width}
+                height={sidebarAdSlot.height}
+                enabled={studioState.admin.advertising.enabled && sidebarAdSlot.enabled}
+                label={sidebarAdSlot.label}
+                fallback={sidebarAdSlot.fallback}
+              />
 
-                {/* Instance Selector to demonstrate Isolated Instance States */}
-                <div
-                  style={{
-                    marginTop: '0.875rem',
-                    paddingTop: '0.875rem',
-                    borderTop: '1px solid var(--studio-border-subtle)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '0.75rem',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>
-                    النسخ المعزولة (Element Instances):
-                  </span>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {Object.values(studioState.instances).map((inst) => (
-                      <button
-                        key={inst.id}
-                        type="button"
-                        className="studio-tab-btn"
-                        data-active={studioState.activeInstanceId === inst.id}
-                        onClick={() => selectInstance(inst.id)}
-                      >
-                        {inst.label} (v{inst.stateVersion})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
+              {renderInspectorPanel()}
+            </div>
+          )}
 
-            {/* Experimental Sidebar AdSlot (Disabled by default; zero footprint unless toggled) */}
-            <AdSlot
-              id={sidebarAdSlot.id}
-              placement={sidebarAdSlot.placement}
-              width={sidebarAdSlot.width}
-              height={sidebarAdSlot.height}
-              enabled={studioState.admin.advertising.enabled && sidebarAdSlot.enabled}
-              label={sidebarAdSlot.label}
-              fallback={sidebarAdSlot.fallback}
+          {/* Vertical Resize Handle between Controls and Stage (Desktop only) */}
+          {!workspaceLayout.controlsCollapsed && (
+            <WorkspaceResizeHandle
+              orientation="vertical"
+              label="مقبض تغيير عرض لوحة التحكم والمعاينة"
+              value={workspaceLayout.controlsWidth}
+              min={WORKSPACE_LAYOUT_BOUNDS.minControlsWidth}
+              max={WORKSPACE_LAYOUT_BOUNDS.maxControlsWidth}
+              measurementText={`عرض التحكم: ${workspaceLayout.controlsWidth}px · عرض المعاينة: ${workspaceLayout.stageWidth}px (عرض العنصر ثابت: ${previewResult.dimensionsSummary.widthCss})`}
+              onChange={(nextWidth) => {
+                const containerW = workspaceContainerRef.current?.clientWidth;
+                resizeColumnsWidth(nextWidth, containerW);
+              }}
+              onReset={resetWorkspaceLayout}
             />
+          )}
 
-            {/* Experimental Inspector Region */}
-            <ContractProbeInspector
-              state={activeInstance.state}
-              onUpdateContentField={updateContentField}
-              onResetContentField={resetContentField}
-              onUpdateIcon={updateIcon}
-              onResetIconField={resetIconField}
-              onUpdateDimensions={updateDimensions}
-              onResetDimensionField={resetDimensionField}
-              onUpdateSurface={updateSurface}
-              onResetSurfaceField={resetSurfaceField}
-              onResetAll={resetActiveInstance}
-            />
-          </div>
-
-          {/* Left Column in RTL (Second on Mobile): Preview + Export Code */}
+          {/* Left Column in RTL: Sticky PreviewStage + Horizontal Handle + ExportPanel */}
           <div className="studio-column-stage">
             <PreviewAdapter
               instanceLabel={activeInstance.label}
@@ -404,10 +464,129 @@ export const AppShell: React.FC = () => {
               exportBundle={exportBundle}
               dimensions={activeInstance.state.dimensions}
               previewState={studioState.preview}
+              workspaceLayout={workspaceLayout}
               onUpdatePreviewState={updatePreviewState}
+              onResizePreviewHeight={resizePreviewHeight}
+              onEnterFullscreen={() => setPreviewMode('fullscreen')}
+              onExitFullscreen={() => setPreviewMode('docked')}
+              onResetWorkspaceLayout={resetWorkspaceLayout}
+              onToggleControlsCollapsed={() => toggleControlsPanel()}
+              onToggleExportCollapsed={() => toggleExportPanel()}
             />
           </div>
         </main>
+      )}
+
+      {/* FULLSCREEN PREVIEW LAYER (Independent Fixed Overlay with Collapsible Drawer) */}
+      {isFullscreen && (
+        <div
+          className="studio-fullscreen-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="وضع العرض الكامل للمعاينة"
+        >
+          {/* Compact Top Action Bar for Fullscreen Mode */}
+          <div className="studio-fullscreen-topbar">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+              <strong style={{ fontSize: '0.95rem' }}>وضع العرض الكامل (Fullscreen)</strong>
+              <span className="studio-panel-meta">
+                اضغط Escape للخروج الفوري دون فقدان أي تعديلات
+              </span>
+            </div>
+
+            {/* Drawer Toggle Bar (Minimized Library, Inspector, and Export panels) */}
+            <div className="studio-fullscreen-drawer-triggers">
+              <button
+                type="button"
+                className="studio-tab-btn"
+                data-active={activeDrawer === 'inspector'}
+                onClick={() =>
+                  setDrawerTab(activeDrawer === 'inspector' ? 'none' : 'inspector')
+                }
+              >
+                درج المفتش (Inspector)
+              </button>
+              <button
+                type="button"
+                className="studio-tab-btn"
+                data-active={activeDrawer === 'library'}
+                onClick={() => setDrawerTab(activeDrawer === 'library' ? 'none' : 'library')}
+              >
+                درج المكتبة (Library)
+              </button>
+              <button
+                type="button"
+                className="studio-tab-btn"
+                data-active={activeDrawer === 'export'}
+                onClick={() => setDrawerTab(activeDrawer === 'export' ? 'none' : 'export')}
+              >
+                درج التصدير (Export)
+              </button>
+              <button
+                type="button"
+                className="studio-btn studio-btn-primary"
+                data-testid="fullscreen-topbar-exit-btn"
+                onClick={() => setPreviewMode('docked')}
+              >
+                خروج من العرض الكامل (Esc)
+              </button>
+            </div>
+          </div>
+
+          <div className="studio-fullscreen-body">
+            {/* Collapsible Drawer for Tools in Fullscreen */}
+            {activeDrawer !== 'none' && (
+              <aside
+                className="studio-fullscreen-drawer"
+                aria-label="درج الأدوات في وضع العرض الكامل"
+              >
+                <div className="studio-fullscreen-drawer-header">
+                  <strong>
+                    {activeDrawer === 'inspector'
+                      ? 'درج المفتش المنظم'
+                      : activeDrawer === 'library'
+                        ? 'درج المكتبة والنسخ'
+                        : 'درج لوحة التصدير'}
+                  </strong>
+                  <button
+                    type="button"
+                    className="studio-btn studio-btn-ghost"
+                    onClick={() => setDrawerTab('none')}
+                  >
+                    إغلاق الدرج ✕
+                  </button>
+                </div>
+
+                <div className="studio-fullscreen-drawer-content">
+                  {activeDrawer === 'inspector' && renderInspectorPanel()}
+                  {activeDrawer === 'library' && renderLibraryPanel()}
+                  {activeDrawer === 'export' && (
+                    <ExportPanel
+                      previewResult={previewResult}
+                      exportBundle={exportBundle}
+                      previewState={studioState.preview}
+                      onUpdatePreviewState={updatePreviewState}
+                    />
+                  )}
+                </div>
+              </aside>
+            )}
+
+            {/* Fullscreen Stage Canvas */}
+            <div className="studio-fullscreen-stage-area">
+              <PreviewStage
+                instanceLabel={activeInstance.label}
+                previewResult={previewResult}
+                exportBundle={exportBundle}
+                dimensions={activeInstance.state.dimensions}
+                previewState={studioState.preview}
+                workspaceLayout={workspaceLayout}
+                onUpdatePreviewState={updatePreviewState}
+                onExitFullscreen={() => setPreviewMode('docked')}
+              />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ROUTE 2: INTERACTIVE CONTRACT VERIFICATION MATRIX */}
@@ -427,7 +606,7 @@ export const AppShell: React.FC = () => {
             <div className="studio-panel-header">
               <div>
                 <h2 className="studio-panel-title">
-                  مصفوفة اختبار عقد النواة (Phase 1 Core Contract Verification)
+                  مصفوفة اختبار عقد النواة ومساحة العمل (Core & Workspace Verification)
                 </h2>
                 <div className="studio-panel-meta">
                   تعمل هذه الفحوص في المتصفح كما تعمل عبر أمر npm test في سطر الأوامر
@@ -493,7 +672,7 @@ export const AppShell: React.FC = () => {
           <section className="studio-panel">
             <div className="studio-panel-header">
               <h2 className="studio-panel-title">
-                مسار الحالة من المفتش (Inspector) إلى المعاينة (Preview) والتصدير (ExportBundle)
+                تنظيم مساحة العمل وفصل WorkspaceLayoutState عن ElementState
               </h2>
             </div>
             <div
@@ -502,26 +681,25 @@ export const AppShell: React.FC = () => {
             >
               <div>
                 <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '0.95rem' }}>
-                  01. مسار الحالة (Inspector → Immutable Store → Preview)
+                  01. فصل حالة تخطيط مساحة العمل (WorkspaceLayoutState) عن حالة العنصر
                 </h3>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--studio-text-secondary)' }}>
-                  عند تعديل أي حقل في المفتش (مثل العنوان أو العرض أو الأيقونة)، يستدعي المفتش دالة
-                  انتقال نقية (Pure Function) داخل مخزن الحالة تنسخ حالة النسخة النشطة فقط وتحدث
-                  الحقل المستهدف وحده دون المساس ببقية الحقول، ثم تمرر الحالة الجديدة إلى دالة{' '}
-                  <code>module.renderPreview</code> التي تولد HTML وCSS المعزولين للنطاق{' '}
-                  <code>[data-element-scope]</code> فورًا دون إعادة تحميل الصفحة.
+                  تحتفظ <code>WorkspaceLayoutState</code> بأبعاد اللوحات (
+                  <code>controlsWidth</code>، <code>stageWidth</code>، <code>previewHeight</code>)
+                  ووضع المعاينة (<code>docked | fullscreen</code>) بمعزل تام عن{' '}
+                  <code>ElementInstance.state.dimensions</code>. تغيير حجم لوحة التحكم أو ارتفاع
+                  المعاينة لا يغير عرض أو ارتفاع العنصر إطلاقًا.
                 </p>
               </div>
 
               <div>
                 <h3 style={{ margin: '0 0 0.35rem 0', fontSize: '0.95rem' }}>
-                  02. مسار التصدير المستقل (State → Validator → ExportBundle)
+                  02. المعاينة الثابتة (Sticky PreviewStage) وفصل ExportPanel
                 </h3>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--studio-text-secondary)' }}>
-                  يعتمد التصدير على نفس دوال التوليد (<code>generateHtml</code> و
-                  <code>generateCss</code>) المستخدمة في المعاينة، ويمر عبر محرك التحقق{' '}
-                  <code>validator.ts</code> للتأكد من خلو المخرجات من <code>undefined</code> أو{' '}
-                  <code>NaN</code> والتزامها بالعزل الكامل عن React وTailwind.
+                  تم فصل <code>PreviewStage</code> عن <code>ExportPanel</code> بحيث يبقى{' '}
+                  <code>PreviewStage</code> وحده عائمًا (Sticky) أثناء تمرير الصفحة على سطح المكتب،
+                  بينما تبقى لوحة التصدير أسفله قابلة للتمرير والطي.
                 </p>
               </div>
             </div>

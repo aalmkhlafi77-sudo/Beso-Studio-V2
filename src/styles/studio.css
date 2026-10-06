@@ -1,7 +1,13 @@
 /**
- * Beso Studio V2 — Studio Shell Styles (studio.css)
- * Pure RTL responsive layout without rigid fixed dimensions.
- * Relies strictly on CSS variables from themes.css.
+ * Beso Studio V2 — Studio Shell & Workspace Styles (studio.css)
+ *
+ * Implements Task 2 Responsive & Workspace Architecture:
+ * - Resizable Desktop Workspace Grid (Controls Column + Vertical Resize Handle + Stage Column).
+ * - Sticky PreviewStage ONLY on desktop (>= 1024px); parent .studio-column-stage is NOT sticky.
+ * - Fullscreen Preview Overlay with slide-over Drawer on desktop and full-width Drawer on mobile.
+ * - Accessible Accordion groups with modified counters.
+ * - Verified responsive layout across 360px / 390px / 768px / 1024px / 1280px / 1440px
+ *   with zero horizontal page scroll.
  */
 
 :root {
@@ -110,17 +116,22 @@ body {
   flex-wrap: wrap;
 }
 
-/* Main Workspace Grid */
+/* Main Workspace Grid with Resizable Columns */
 .studio-workspace {
+  --workspace-controls-width: 520px;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(320px, var(--workspace-controls-width)) 14px minmax(340px, 1fr);
+  gap: 0.5rem;
   padding: 1rem 1.25rem;
   flex: 1;
   width: 100%;
   max-width: 1600px;
   margin: 0 auto;
-  align-items: start;
+  align-items: stretch;
+}
+
+.studio-workspace[data-controls-collapsed="true"] {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .studio-column-controls {
@@ -130,13 +141,131 @@ body {
   min-width: 0;
 }
 
+/* Requirement 2: Do NOT make the entire stage column sticky! */
 .studio-column-stage {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   min-width: 0;
-  position: sticky;
-  top: 4.5rem;
+  position: static;
+}
+
+.studio-stage-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* Requirement 2: Make ONLY PreviewStage float/sticky on desktop scroll */
+@media (min-width: 1024px) {
+  .studio-preview-sticky-unit {
+    position: sticky;
+    top: 4.5rem;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    background-color: var(--studio-bg);
+    padding-bottom: 0.25rem;
+  }
+}
+
+.studio-stage-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.studio-stage-telemetry-bar {
+  padding: 0.5rem 1.125rem;
+  border-bottom: 1px solid var(--studio-border-subtle);
+  background-color: var(--studio-surface-muted);
+}
+
+/* Workspace Resize Handles (Vertical & Horizontal) */
+.studio-resize-handle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  touch-action: none;
+  border-radius: var(--studio-radius-sm);
+  transition: background-color 140ms ease;
+}
+
+.studio-resize-handle:focus-visible {
+  outline: none;
+  box-shadow: var(--studio-focus-ring);
+}
+
+.studio-resize-handle--vertical {
+  width: 14px;
+  cursor: col-resize;
+  align-self: stretch;
+}
+
+.studio-resize-handle--horizontal {
+  height: 16px;
+  width: 100%;
+  cursor: row-resize;
+}
+
+.studio-resize-handle:hover,
+.studio-resize-handle[data-dragging="true"] {
+  background-color: var(--studio-accent-soft);
+}
+
+.studio-resize-grip {
+  background-color: var(--studio-border);
+  border-radius: 999px;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.studio-resize-handle--vertical .studio-resize-grip {
+  width: 4px;
+  height: 56px;
+}
+
+.studio-resize-handle--horizontal .studio-resize-grip {
+  width: 64px;
+  height: 4px;
+}
+
+.studio-resize-handle:hover .studio-resize-grip,
+.studio-resize-handle[data-dragging="true"] .studio-resize-grip,
+.studio-resize-handle:focus-visible .studio-resize-grip {
+  background-color: var(--studio-accent);
+}
+
+.studio-resize-readout {
+  position: absolute;
+  z-index: 40;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--studio-radius-sm);
+  background-color: var(--studio-surface-elevated);
+  border: 1px solid var(--studio-accent);
+  color: var(--studio-text);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--studio-shadow-md);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-resize-handle--vertical .studio-resize-readout {
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.studio-resize-handle--horizontal .studio-resize-readout {
+  top: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Panels (Single-Elevation Depth) */
@@ -175,6 +304,225 @@ body {
 
 .studio-panel-body {
   padding: 1rem 1.125rem;
+}
+
+/* Inspector Category Sub-Toolbar */
+.studio-inspector-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 1.125rem;
+  background-color: var(--studio-bg-subtle);
+  border-bottom: 1px solid var(--studio-border-subtle);
+  flex-wrap: wrap;
+}
+
+/* Accessible Accordion Groups */
+.studio-accordion-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.studio-accordion-item {
+  border: 1px solid var(--studio-border-subtle);
+  border-radius: var(--studio-radius-md);
+  background-color: var(--studio-bg-subtle);
+  overflow: hidden;
+  transition: border-color 150ms ease;
+}
+
+.studio-accordion-item[data-open="true"] {
+  border-color: var(--studio-border);
+}
+
+.studio-accordion-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-left: 0.5rem;
+  background-color: var(--studio-surface-muted);
+}
+
+.studio-accordion-trigger {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 0.875rem;
+  background: transparent;
+  border: none;
+  color: var(--studio-text);
+  font-family: var(--studio-font-body);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: right;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.studio-accordion-trigger:hover {
+  color: var(--studio-accent);
+}
+
+.studio-accordion-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--studio-focus-ring);
+}
+
+.studio-accordion-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.studio-accordion-chevron {
+  color: var(--studio-accent);
+  font-size: 0.85rem;
+}
+
+.studio-accordion-subtitle {
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: var(--studio-text-muted);
+}
+
+.studio-accordion-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.studio-modified-count {
+  font-size: 0.72rem;
+  color: var(--studio-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-modified-count[data-modified="true"] {
+  color: var(--studio-accent);
+  font-weight: 700;
+}
+
+.studio-accordion-reset-btn {
+  flex-shrink: 0;
+}
+
+.studio-accordion-panel {
+  border-top: 1px solid var(--studio-border-subtle);
+}
+
+.studio-accordion-body {
+  padding: 0.875rem;
+}
+
+/* Independent Content Field Card inside Accordion */
+.studio-independent-field-card {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--studio-radius-sm);
+  border: 1px solid var(--studio-border-subtle);
+  background-color: var(--studio-surface);
+}
+
+.studio-independent-field-card[data-modified="true"] {
+  border-color: var(--studio-border);
+}
+
+.studio-independent-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.studio-color-swatch-sm {
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0;
+  border: 1px solid var(--studio-border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Fullscreen Preview Layer & Collapsible Drawer */
+.studio-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--studio-bg);
+  color: var(--studio-text);
+  overflow: hidden;
+}
+
+.studio-fullscreen-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 1.25rem;
+  background-color: var(--studio-surface);
+  border-bottom: 1px solid var(--studio-border);
+  flex-wrap: wrap;
+}
+
+.studio-fullscreen-drawer-triggers {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.studio-fullscreen-body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.studio-fullscreen-drawer {
+  width: 440px;
+  max-width: 100vw;
+  height: 100%;
+  background-color: var(--studio-surface);
+  border-left: 1px solid var(--studio-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 65;
+  box-shadow: var(--studio-shadow-md);
+}
+
+.studio-fullscreen-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--studio-border-subtle);
+  background-color: var(--studio-surface-elevated);
+}
+
+.studio-fullscreen-drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+
+.studio-fullscreen-stage-area {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 1rem;
 }
 
 /* Library Cards Grid */
@@ -245,34 +593,6 @@ body {
 }
 
 /* Inspector Form Controls */
-.studio-control-group {
-  padding: 0.875rem 0;
-  border-bottom: 1px solid var(--studio-border-subtle);
-}
-
-.studio-control-group:first-child {
-  padding-top: 0;
-}
-
-.studio-control-group:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.studio-control-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.625rem;
-}
-
-.studio-control-label {
-  font-size: 0.825rem;
-  font-weight: 600;
-  color: var(--studio-text);
-}
-
 .studio-field-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -359,9 +679,14 @@ body {
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
-.studio-btn:hover {
+.studio-btn:hover:not(:disabled) {
   border-color: var(--studio-accent);
   background-color: var(--studio-surface-interactive);
+}
+
+.studio-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .studio-btn-primary {
@@ -370,7 +695,7 @@ body {
   border-color: var(--studio-accent);
 }
 
-.studio-btn-primary:hover {
+.studio-btn-primary:hover:not(:disabled) {
   background-color: var(--studio-accent-hover);
   border-color: var(--studio-accent-hover);
   color: var(--studio-on-accent);
@@ -384,7 +709,7 @@ body {
   color: var(--studio-text-secondary);
 }
 
-.studio-btn-ghost:hover {
+.studio-btn-ghost:hover:not(:disabled) {
   color: var(--studio-accent);
   border-color: var(--studio-accent);
 }
@@ -428,7 +753,7 @@ body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.65rem;
   font-size: 0.75rem;
   color: var(--studio-text-secondary);
   font-variant-numeric: tabular-nums;
@@ -438,21 +763,34 @@ body {
   color: var(--studio-text-muted);
 }
 
-/* Responsive Breakpoints:
-   On screens < 1024px (768px, 390px, 360px), stack columns vertically:
-   Header -> Library -> Inspector -> Preview -> Code */
+/* Responsive Breakpoints (< 1024px: 768px, 390px, 360px):
+   - Stack columns vertically
+   - Hide vertical column resize handle on stacked screens
+   - Disable nested sticky on mobile scroll
+   - Fullscreen drawer becomes full-screen overlay drawer on mobile */
 @media (max-width: 1023px) {
   .studio-workspace {
     grid-template-columns: 1fr;
     padding: 0.75rem;
   }
 
-  .studio-column-stage {
+  .studio-resize-handle--vertical {
+    display: none;
+  }
+
+  .studio-preview-sticky-unit {
     position: static;
   }
 
   .studio-header {
     padding: 0.65rem 0.85rem;
+  }
+
+  .studio-fullscreen-drawer {
+    position: fixed;
+    inset: 3.5rem 0 0 0;
+    width: 100%;
+    border-left: none;
   }
 }
 
@@ -467,5 +805,9 @@ body {
 
   .studio-field-grid {
     grid-template-columns: 1fr;
+  }
+
+  .studio-accordion-body {
+    padding: 0.65rem;
   }
 }

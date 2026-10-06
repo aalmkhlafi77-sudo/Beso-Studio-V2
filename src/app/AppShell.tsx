@@ -456,8 +456,8 @@ export const AppShell: React.FC = () => {
             />
           )}
 
-          {/* Left Column in RTL: Sticky PreviewStage + Horizontal Handle + ExportPanel */}
-          <div className="studio-column-stage">
+          {/* Left Column in RTL: Full-height Sticky Track for PreviewStage + Horizontal Handle */}
+          <div className="studio-column-stage" data-testid="studio-column-stage">
             <PreviewAdapter
               instanceLabel={activeInstance.label}
               previewResult={previewResult}
@@ -471,7 +471,18 @@ export const AppShell: React.FC = () => {
               onExitFullscreen={() => setPreviewMode('docked')}
               onResetWorkspaceLayout={resetWorkspaceLayout}
               onToggleControlsCollapsed={() => toggleControlsPanel()}
-              onToggleExportCollapsed={() => toggleExportPanel()}
+            />
+          </div>
+
+          {/* Separated Natural-Flow Row for ExportPanel so it never terminates PreviewStage sticky scope early */}
+          <div className="studio-workspace-export-row" data-testid="studio-workspace-export-row">
+            <ExportPanel
+              previewResult={previewResult}
+              exportBundle={exportBundle}
+              previewState={studioState.preview}
+              collapsed={workspaceLayout.exportCollapsed}
+              onToggleCollapsed={() => toggleExportPanel()}
+              onUpdatePreviewState={updatePreviewState}
             />
           </div>
         </main>

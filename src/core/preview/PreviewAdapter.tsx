@@ -1,9 +1,10 @@
 /**
  * Beso Studio V2 — PreviewAdapter Coordinator
  *
- * Composes:
- * 1. Sticky PreviewStage (with horizontal resize handle at its bottom edge).
- * 2. Independent ExportPanel positioned below PreviewStage.
+ * Composes the sticky PreviewStage unit inside `.studio-stage-stack` so that
+ * `.studio-stage-stack` and `.studio-column-stage` span the entire height of the
+ * workspace row alongside the Inspector column without `ExportPanel` prematurely
+ * terminating the sticky scope.
  */
 
 import React from 'react';
@@ -16,7 +17,6 @@ import {
   WORKSPACE_LAYOUT_BOUNDS,
   WorkspaceLayoutState,
 } from '../state/workspaceLayoutStore';
-import { ExportPanel } from './ExportPanel';
 import { PreviewStage } from './PreviewStage';
 
 export interface PreviewAdapterProps {
@@ -32,7 +32,6 @@ export interface PreviewAdapterProps {
   onExitFullscreen: () => void;
   onResetWorkspaceLayout: () => void;
   onToggleControlsCollapsed: () => void;
-  onToggleExportCollapsed: () => void;
 }
 
 export const PreviewAdapter: React.FC<PreviewAdapterProps> = ({
@@ -48,12 +47,11 @@ export const PreviewAdapter: React.FC<PreviewAdapterProps> = ({
   onExitFullscreen,
   onResetWorkspaceLayout,
   onToggleControlsCollapsed,
-  onToggleExportCollapsed,
 }) => {
   return (
-    <div className="studio-stage-stack">
-      {/* Sticky Unit: ONLY PreviewStage + Horizontal Height Resize Handle stick on desktop scroll */}
-      <div className="studio-preview-sticky-unit">
+    <div className="studio-stage-stack" data-testid="studio-stage-stack">
+      {/* Sticky Unit: spans within the full-height .studio-stage-stack track on desktop */}
+      <div className="studio-preview-sticky-unit" data-testid="studio-preview-sticky-unit">
         <PreviewStage
           instanceLabel={instanceLabel}
           previewResult={previewResult}
@@ -80,16 +78,6 @@ export const PreviewAdapter: React.FC<PreviewAdapterProps> = ({
           onReset={onResetWorkspaceLayout}
         />
       </div>
-
-      {/* Separated ExportPanel below the sticky preview */}
-      <ExportPanel
-        previewResult={previewResult}
-        exportBundle={exportBundle}
-        previewState={previewState}
-        collapsed={workspaceLayout.exportCollapsed}
-        onToggleCollapsed={onToggleExportCollapsed}
-        onUpdatePreviewState={onUpdatePreviewState}
-      />
     </div>
   );
 };

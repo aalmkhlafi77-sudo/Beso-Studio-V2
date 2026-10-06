@@ -15,6 +15,8 @@
  */
 
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, it } from 'node:test';
 import { DEFAULT_ADMIN_CONFIG } from '../../admin/configSchema';
 import {
@@ -405,6 +407,58 @@ describe('Beso Studio V2 — Core & Workspace Contract Tests', () => {
     assert.equal(
       backToDocked.inspectorAccordions.openGroupIds.includes('content-advanced'),
       true
+    );
+  });
+
+  it('11. اختبار سلسلة الحاويات ونطاق Sticky Preview الكامل (Sticky Preview Parent Chain & Full Track Test)', () => {
+    const cssPath = path.resolve(process.cwd(), 'src/styles/studio.css');
+    const previewAdapterPath = path.resolve(
+      process.cwd(),
+      'src/core/preview/PreviewAdapter.tsx'
+    );
+    const appShellPath = path.resolve(process.cwd(), 'src/app/AppShell.tsx');
+
+    const studioCss = fs.readFileSync(cssPath, 'utf-8');
+    const previewAdapterSource = fs.readFileSync(previewAdapterPath, 'utf-8');
+    const appShellSource = fs.readFileSync(appShellPath, 'utf-8');
+
+    // 1. html, body and .studio-shell must use overflow-x: clip (not overflow-x: hidden which breaks sticky)
+    assert.equal(
+      studioCss.includes('overflow-x: clip;'),
+      true,
+      'studio.css must use overflow-x: clip to prevent horizontal scroll without breaking position: sticky'
+    );
+
+    // 2. .studio-column-stage and .studio-stage-stack must stretch to 100% height with overflow: visible
+    assert.match(
+      studioCss,
+      /\.studio-column-stage\s*\{[\s\S]*?height:\s*100%;[\s\S]*?min-height:\s*100%;[\s\S]*?overflow:\s*visible;[\s\S]*?\}/
+    );
+    assert.match(
+      studioCss,
+      /\.studio-stage-stack\s*\{[\s\S]*?flex:\s*1\s+1\s+auto;[\s\S]*?height:\s*100%;[\s\S]*?min-height:\s*100%;[\s\S]*?overflow:\s*visible;[\s\S]*?\}/
+    );
+
+    // 3. ExportPanel must NOT be inside PreviewAdapter / .studio-stage-stack so it never terminates sticky scope early
+    assert.equal(
+      previewAdapterSource.includes('<ExportPanel'),
+      false,
+      'ExportPanel must be outside PreviewAdapter/.studio-stage-stack so sticky scope extends to the full workspace row height'
+    );
+    assert.equal(
+      appShellSource.includes('studio-workspace-export-row'),
+      true,
+      'AppShell must render ExportPanel in its own natural-flow row (.studio-workspace-export-row)'
+    );
+
+    // 4. Desktop uses position: sticky on .studio-preview-sticky-unit; mobile disables sticky (position: static)
+    assert.match(
+      studioCss,
+      /@media\s*\(min-width:\s*1024px\)\s*\{[\s\S]*?\.studio-preview-sticky-unit\s*\{[\s\S]*?position:\s*sticky;/
+    );
+    assert.match(
+      studioCss,
+      /@media\s*\(max-width:\s*1023px\)\s*\{[\s\S]*?\.studio-preview-sticky-unit\s*\{[\s\S]*?position:\s*static;/
     );
   });
 });
